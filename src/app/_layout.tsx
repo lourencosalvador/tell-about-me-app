@@ -1,4 +1,4 @@
-import { Slot } from "expo-router";
+import { Slot, Stack } from "expo-router";
 import "./../../global.css"
 import { useFonts } from "expo-font";
 import {
@@ -7,6 +7,8 @@ import {
     Urbanist_700Bold,
 } from "@expo-google-fonts/urbanist"
 import { Loading } from "./components/loading";
+import { StatusBar } from "react-native";
+import 'react-native-reanimated'
 
 
 export default function Layout() {
@@ -19,5 +21,10 @@ export default function Layout() {
     if (!fontsLoaded) {
         return <Loading />
     }
-    return (<Slot />)
+    return (
+        <>
+            <Stack screenOptions={{ headerShown: false }} />
+            <StatusBar barStyle={"light-content"} />
+        </>
+    )
 }

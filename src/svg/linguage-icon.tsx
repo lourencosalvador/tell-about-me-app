@@ -2,7 +2,6 @@ import * as React from "react"
 import Svg, { SvgProps, Path } from "react-native-svg"
 const LinguageIcon = (props: SvgProps) => (
   <Svg
-    xmlns="http://www.w3.org/2000/svg"
     width={45}
     height={45}
     fill="none"

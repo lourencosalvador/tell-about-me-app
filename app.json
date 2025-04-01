@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FarmaGo",
+    "name": "TellAboutMe",
     "slug": "FarmaGo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,13 +14,15 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.FarmaGo"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.anonymous.FarmaGo"
     },
     "web": {
       "bundler": "metro",
@@ -28,9 +30,47 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      "expo-font"
-    ],
+  "expo-router",
+  "expo-font",
+  [
+    "expo-custom-assets",
+    {
+      "assetsPaths": [
+        "./src/resources/"
+      ]
+    }
+  ],
+  [
+    "react-native-vision-camera",
+    {
+      "cameraPermissionText": "$(PRODUCT_NAME) needs access to your Camera.",
+      "enableMicrophonePermission": true,
+      "microphonePermissionText": "$(PRODUCT_NAME) needs access to your Microphone."
+    }
+  ],
+  [
+    "expo-camera",
+    {
+      "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+      "recordAudioAndroid": true,
+      "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone"
+    }
+  ],
+  [
+    "expo-av",
+    {
+      "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
+    }
+  ],
+  [
+    "expo-media-library",
+    {
+      "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+      "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
+      "isAccessMediaLocationEnabled": true
+    }
+  ]
+],
     "experiments": {
       "typedRoutes": true
     }

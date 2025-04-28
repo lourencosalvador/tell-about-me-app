@@ -1,7 +1,7 @@
 import { View, Text } from "react-native";
 
 
-export  function Video(){
+export default function Video(){
     return(
         <View>
             <Text>Hello</Text>

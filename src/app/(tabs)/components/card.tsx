@@ -2,7 +2,7 @@ import ChatIconPlayground from "@/src/svg/chat-icon-playground";
 import { View, Text } from "react-native";
 
 
-export function Card() {
+export default function Card() {
     return (
         <View className="h-[14.125rem] flex justify-between p-3 w-[12.875rem] rounded-lg border border-[#B0B0B01A]">
             <ChatIconPlayground />

@@ -1,35 +1,36 @@
-import { View, Text, TouchableOpacity, Image, ScrollView } from "react-native"
+import { View, Text, Image, ScrollView } from "react-native"
 import user from "@/assets/images/studant-bb.jpeg"
 import HartIcon from "@/src/svg/hart-icon"
 import NotificationIcon from "@/src/svg/notification-icon"
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button } from "../../components/button";
+import Button from "../../components/button";
 import TimeHomeIcon from "@/src/svg/time-home-icon";
-import { ProgressCircle } from "../components/progress";
+import ProgressCircle from "../components/progress";
 import { useEffect, useState } from "react";
-import { Card } from "../components/card";
-import { CardRecommendations } from "../components/card-recommendations";
-import ChatIconPlayground from "@/src/svg/chat-icon-playground";
+import Card from "../components/card";
+import CardRecommendations from "../components/card-recommendations";
+import { useAuthStore } from "@/src/store/user";
 
 export default function Home() {
+    const { user: userData } = useAuthStore();
     const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-      const interval = setInterval(() => {
-        setProgress((prev) => (prev < 100 ? prev + 1 : 0)); 
-      }, 2000);
-  
-      return () => clearInterval(interval);
+        const interval = setInterval(() => {
+            setProgress((prev) => (prev < 100 ? prev + 1 : 0));
+        }, 2000);
+
+        return () => clearInterval(interval);
     }, []);
-  
+
     return (
         <View className="flex-1 bg-[#161616] pt-20 px-6">
             <View className="w-full justify-between mb-6 flex-row items-center h-auto">
                 <View className="flex flex-row gap-4 items-center">
                     <View className="w-[3.5rem] h-[3.5rem] overflow-hidden rounded-full border-2 border-bg-primary">
-                        <Image source={user} className="w-[3.5rem] h-[3.5rem] object-cover" />
+                        <Image source={{ uri: userData?.photoUrl}} className="w-[3.5rem] h-[3.5rem] object-cover" />
                     </View>
-                    <Text className="text-[22px] font-heading text-white">Hi, Lorrys</Text>
+                    <Text className="text-[22px] font-heading text-white">Hi, {userData?.name}</Text>
                 </View>
                 <View className="size-auto flex flex-row gap-3">
                     <View className="bg-[#1A1A1E] flex flex-row gap-3 w-[5.5rem] items-center justify-center rounded-lg h-auto py-2">
@@ -50,53 +51,53 @@ export default function Home() {
                 showsVerticalScrollIndicator={false}
                 className="w-full h-auto"
             >
-            <LinearGradient
-                colors={['#8257E5', '#493280']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ borderRadius: 14 }}
-                className="w-full rounded-2xl p-5 shadow-lg"
-            >
-                <View className="px-4 py-5 flex gap-6 size-auto">
-                    <View className="flex flex-row gap-3">
-                        <TimeHomeIcon />
-                        <View className="flex">
-                            <Text className="text-white font-bold text-lg text-[19px] font-heading">25:09:33</Text>
-                            <Text className="text-white text-base">
-                                Tempo para receber recomendação de hoje
-                            </Text>
+                <LinearGradient
+                    colors={['#8257E5', '#493280']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ borderRadius: 14 }}
+                    className="w-full rounded-2xl p-5 shadow-lg"
+                >
+                    <View className="px-4 py-5 flex gap-6 size-auto">
+                        <View className="flex flex-row gap-3">
+                            <TimeHomeIcon />
+                            <View className="flex">
+                                <Text className="text-white font-bold text-lg text-[19px] font-heading">25:09:33</Text>
+                                <Text className="text-white text-base">
+                                    Tempo para receber recomendação de hoje
+                                </Text>
+                            </View>
                         </View>
+
+                        <Button title="Vizualizar" className="bg-[#FFFF] text-[#B0B0B0]" />
+                    </View>
+                </LinearGradient>
+
+                <View className="w-full mb-5 h-[6rem] px-5 flex flex-row justify-between items-center bg-[#1A1A1E] mt-7 rounded-lg">
+                    <Text className="text-[15px] font-heading text-white">35 dias de 365 dias Restantes  </Text>
+                    <ProgressCircle percentage={progress} />
+                </View>
+
+                <View className="w-full mb-5 h-auto flex gap-4">
+                    <Text className="text-[22px] font-heading text-white">Histórico</Text>
+                    <View className="w-full h-auto flex flex-row gap-4">
+                        <Card />
+                        <Card />
+                    </View>
+                </View>
+
+                <View className="w-full h-auto flex gap-4">
+                    <View className="flex flex-row items-center justify-between">
+                        <Text className="text-[20px] font-heading text-white">Recomendações Personalizadas</Text>
+                        <Text className="text-[15px] font-subtitle text-white">Ver tudo</Text>
+                    </View>
+                    <View className="w-full h-auto flex gap-4">
+                        <CardRecommendations />
+                        <CardRecommendations />
                     </View>
 
-                    <Button title="Vizualizar" className="bg-[#FFFF] text-[#B0B0B0]" />
                 </View>
-            </LinearGradient>
 
-            <View className="w-full mb-5 h-[6rem] px-5 flex flex-row justify-between items-center bg-[#1A1A1E] mt-7 rounded-lg">
-            <Text className="text-[15px] font-heading text-white">35 dias de 365 dias Restantes  </Text>
-            <ProgressCircle percentage={progress}/>
-            </View>
-
-            <View className="w-full mb-5 h-auto flex gap-4">
-            <Text className="text-[22px] font-heading text-white">Histórico</Text>      
-            <View className="w-full h-auto flex flex-row gap-4">
-                <Card />
-                <Card />
-            </View>
-            </View>
-
-            <View className="w-full h-auto flex gap-4">
-           <View className="flex flex-row items-center justify-between">
-           <Text className="text-[20px] font-heading text-white">Recomendações Personalizadas</Text>      
-           <Text className="text-[15px] font-subtitle text-white">Ver tudo</Text>     
-            </View> 
-            <View className="w-full h-auto flex gap-4">
-                <CardRecommendations />
-                <CardRecommendations />
-            </View>
-            
-            </View>
-                
             </ScrollView>
 
 

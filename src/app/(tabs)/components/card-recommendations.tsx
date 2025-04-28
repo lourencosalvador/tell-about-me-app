@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import LinguageIcon from "@/src/svg/linguage-icon";
 
 
-export function CardRecommendations() {
+export  default function CardRecommendations() {
     return (
         <View className="h-[10.125rem] overflow-hidden  flex flex-row gap-4 w-full rounded-[1.2rem] border border-[#B0B0B01A]">
             <LinearGradient

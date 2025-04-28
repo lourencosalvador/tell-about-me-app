@@ -11,8 +11,11 @@ import { useState } from "react"
 import GaleryIcon from "@/src/svg/galery-icon"
 import PlayIcon from "@/src/svg/play-icon"
 import VideoGallery from "../components/videos"
+import { useAuthStore } from "@/src/store/user"
+import VideoEmptyIcon from "@/src/svg/video-empty-icon"
 
 export default function Test() {
+    const { user: userData } = useAuthStore();
     const [active, setActive] = useState("galery")
     return (
         <View className="flex-1 bg-[#161616] pt-20 px-6">
@@ -37,7 +40,7 @@ export default function Test() {
                 <View className="w-full h-auto  flex justify-center items-center ">
                     <View className="size-auto relative mb-4">
                         <View className="w-[8rem] h-[8rem] overflow-hidden rounded-full border-4 border-[#2A2A2E]">
-                            <Image source={user} className="w-[8rem] h-[8rem] object-cover" />
+                            <Image source={{ uri: userData?.photoUrl}}  className="w-[8rem] h-[8rem] object-cover" />
                         </View>
                         <View className="p-[0.5rem] rounded-xl bg-[#845AE5] absolute right-0 bottom-0">
                             <CameraPerfilIcon />
@@ -47,7 +50,7 @@ export default function Test() {
 
                     <View className="flex mb-8 gap-5 w-full h-auto justify-center items-center">
                         <View className="flex gap-2 items-center">
-                            <Text className="text-[18px] font-heading text-white">@Lorrys_Cardoso</Text>
+                            <Text className="text-[18px] font-heading text-white">@{userData?.name}</Text>
                             <Text className="text-[16.5px] font-subtitle text-[#B0B0B0]">Junior Front-End Developer</Text>
                         </View>
 
@@ -88,7 +91,13 @@ export default function Test() {
                         </View>
                     </View>
                 </View>
-                <VideoGallery />
+                {/* <VideoGallery /> */}
+                                        <View className='flex-1 w-full h-full py-20 flex justify-center items-center'>
+                                            <View className='flex gap-4 items-center'>
+                                                <VideoEmptyIcon />
+                                                <Text className="text-[13px] font-subtitle text-[#ffff]">Não á Videos</Text>
+                                            </View>
+                                        </View>
             </ScrollView>
 
         </View>

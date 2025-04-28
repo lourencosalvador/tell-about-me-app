@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from "react"
-import { View, Text, StyleSheet } from "react-native"
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native"
 import { Camera, useCameraDevice, useCameraDevices, useCameraPermission, useMicrophonePermission } from 'react-native-vision-camera'
 
 export default function Video() {
@@ -38,6 +38,11 @@ export default function Video() {
             audio={true}
             resizeMode="cover"
            />
+
+           <TouchableOpacity className="w-[70px] h-[70px]
+            bg-violet-600 absolute rounded-full bottom-[70px] items-center">
+
+           </TouchableOpacity>
         </View>
     )
 }

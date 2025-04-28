@@ -1,19 +1,66 @@
-import { View, Text, TouchableOpacity } from "react-native"
+import { View, Text, TouchableOpacity, Alert } from "react-native"
 import BackNavigationButtom from "../svg/back-navigation-icon"
 import FormField from "./components/input"
-import { Button } from "./components/button"
+import Button from "./components/button"
 import { router } from "expo-router";
+import { useMutation } from "@tanstack/react-query";
+import { UserService } from "../services/user-auth/user";
+import { useAuthStore } from "../store/user";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { signInSchema, SignInSchemaType } from "../schemas/sign-up-schema";
+import { Controller, useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
 
 
 export default function TestCom() {
+    const { user, token, login, logout } = useAuthStore();
+    const [isNavigationReady, setIsNavigationReady] = useState(false);
+
+    useEffect(() => {
+      // Aguarde até que a navegação esteja pronta
+      const timer = setTimeout(() => setIsNavigationReady(true), 100);
+      return () => clearTimeout(timer);
+    }, []);
+  
+
+    const { control, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<SignInSchemaType>({
+        resolver: zodResolver(signInSchema),
+        defaultValues: {
+            email: "",
+            password: "",
+        }
+    });
+
+    const { mutateAsync: loginUserFn } = useMutation({
+        mutationFn: UserService.loginUser,
+        onSuccess: (data: any) => {
+            login(data)
+        },
+        onError: (error: any) => {
+            console.error('Error fazendo login:', error)
+            Alert.alert('Error ❌', 'Ocorreu um erro ao fazer o login')
+        },
+    })
 
     function handleNavigationSignUp() {
         router.push("/(stacks)/autentication/sign-up")
     }
 
-    function handleNavigationHome() {
-        router.push("/(tabs)/home")
+ const onSubmit = async (data: SignInSchemaType) => {
+    console.log(data)
+       await loginUserFn({
+            email: data.email,
+            password: data.password
+        })
     }
+
+    useEffect(() => {
+        if (isNavigationReady && token) {
+          router.replace("/(tabs)/home");
+        }
+      }, [token, isNavigationReady]);
+    
+
     return (
         <View className="flex-1 bg-[#161616] pt-20 px-6">
             <View className="flex gap-8">
@@ -30,17 +77,29 @@ export default function TestCom() {
                     </View>
 
                     <View className="flex gap-5">
-                        <FormField title="E-email" />
-                        <FormField title="Senha" />
+                        <Controller
+                            control={control}
+                            name="email"
+                            render={({ field: { onChange, value } }) => (
+                                <FormField title="E-mail" value={value} onChangeText={onChange} errorMessage={errors.email?.message} />
+                            )}
+                        />
+                        <Controller
+                            control={control}
+                            name="password"
+                            render={({ field: { onChange, value } }) => (
+                                <FormField title="Senha" value={value} onChangeText={onChange} secureTextEntry errorMessage={errors.password?.message} />
+                            )}
+                        />
                     </View>
                     <View className="w-full h-auto flex items-end">
-                        <TouchableOpacity onPress={handleNavigationSignUp}>
-                            <Text className="text-[16.5px] font-subtitle text-white">Esqueceu sua senha?</Text>
-                        </TouchableOpacity>
+                        <Text className="text-[16.5px] font-subtitle text-white">Esqueceu sua senha?</Text>
                     </View>
-                    <Button onPress={handleNavigationHome} title="Entrar" />
+                    <Button onPress={handleSubmit(onSubmit)} title="Entrar" />
                     <View className="w-full h-auto flex items-center ">
-                        <Text className="text-[16.5px] font-subtitle text-[#B0B0B0]">Não tem uma conta? Inscreva-se</Text>
+                        <TouchableOpacity onPress={handleNavigationSignUp}>
+                            <Text className="text-[16.5px] font-subtitle text-[#B0B0B0]">Não tem uma conta? Inscreva-se</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </View>

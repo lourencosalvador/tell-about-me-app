@@ -1,7 +1,7 @@
 import {Text, View} from "react-native"
 import Svg, { Circle } from 'react-native-svg';
 
-export const ProgressCircle = ({ percentage }: { percentage: number }) => {
+export default function ProgressCircle ({ percentage }: { percentage: number }) {
     const size = 70; 
     const strokeWidth = 10; 
     const radius = (size - strokeWidth) / 2; 

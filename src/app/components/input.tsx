@@ -21,7 +21,8 @@ const FormField = ({
   return (
     <View className={`gap-3 ${otherStyles}`}>
     <View className="size-auto flex flex-row gap-3 items-center">
-    {title === 'E-email' ? <SMSIcon /> : <PassIcon />}
+    {title === 'E-email' && <SMSIcon /> }
+    {title === 'Senha' &&  <PassIcon />}
     <Text className="text-[15px] font-body font-pmedium text-[#6C7278]">{title}</Text>
     </View>
       <View className="w-full h-[3.875rem] px-4 bg-black-100 rounded-2xl bg-[#262626] focus:border-secondary flex flex-row items-center">
@@ -29,6 +30,8 @@ const FormField = ({
           className="flex-1 text-[#B0B0B0] font-psemibold text-base"
           secureTextEntry={title === "Senha" && !showPassword}
           {...props} 
+          autoCorrect={false} 
+           autoCapitalize="none"
         />
 
         {title === "Senha" && (

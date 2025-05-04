@@ -22,7 +22,7 @@ export default function Test() {
     };
 
     return (
-        <View className="flex-1 bg-[#161616] pt-20 px-6">
+        <View className="flex-1 bg-[#161616] pt-8 px-6">
             <View className="w-full justify-between mb-14 flex-row items-center h-auto">
                 <Text className="text-[22px] font-heading text-white">Dicas</Text>
 
@@ -43,23 +43,15 @@ export default function Test() {
 
             <View className="flex gap-6">
                 <Text className="text-[22px] font-heading text-white">Hoje</Text>
-                <View className="w-full mb-12 flex flex-row bg-[#262626] h-[12rem] rounded-lg overflow-hidden">
-                    <LinearGradient
-                        colors={['#8257E5', '#493280']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-
-                        className="w-full rounded-2xl shadow-lg"
-                    >
+                <View className="w-full mb-4 flex flex-row bg-[#493280] h-[12rem] rounded-lg overflow-hidden">
                         <View className="w-[0.5rem] h-full flex justify-center items-center" />
-                    </LinearGradient>
                     <View className="w-full h-full flex justify-evenly py-2">
                         <View className="flex justify-between items-center flex-row w-full px-7">
                             <Text className="text-[18px] font-heading text-white">Nova Recomendação 🎉</Text>
                             <ArrowVertical />
                         </View>
                         <View className="flex justify-between items-center flex-row w-full px-7">
-                            <Text className="text-[11px] leading-4 font-semibold text-white">Melhore design responsivo com Flexbox Froggy, Grid Garden e Frontend Mentor. 🖥️</Text>
+                            <Text className="text-[11px] leading-4 font-semibold text-white">Melhore  design responsivo com Flexbox Froggy, Grid Garden e Frontend Mentor. 🖥️</Text>
                         </View>
                         <View className="flex justify-between items-center flex-row w-full px-7">
                             <Text className="text-[14px] font-heading text-white">Há 1h</Text>
@@ -71,34 +63,20 @@ export default function Test() {
                     </View>
                 </View>
 
-                <View className="flex gap-12">
-                    <View className="w-full flex flex-row bg-[#1A1A1E] border border-[#B0B0B01A] h-[6rem] rounded-2xl overflow-hidden">
-                        <LinearGradient
-                            colors={['#8257E5', '#493280']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            className="w-full rounded-2xl shadow-lg"
-                        >
+                <View className="flex gap-8">
+                    <View className="w-full flex flex-row bg-[#8257E5] border border-[#B0B0B01A] h-[6rem] rounded-2xl overflow-hidden">
                             <View className="w-[5rem] h-full flex justify-center items-center">
                                 <RaioIcon />
                             </View>
-                        </LinearGradient>
-                        <View className="w-auto gap-14 items-center h-full flex flex-row justify-evenly py-2 pl-7">
+                        <View className="w-auto z-40 gap-14 items-center h-full flex flex-row justify-evenly py-2 pl-7">
                             <Text className="text-[18px] font-heading text-white">Nova Recomendação 🎉</Text>
                             <ArrowHorizontal />
                         </View>
                     </View>
-                    <View className="w-full flex flex-row bg-[#1A1A1E] border border-[#B0B0B01A] h-[6rem] rounded-2xl overflow-hidden">
-                        <LinearGradient
-                            colors={['#8257E5', '#493280']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            className="w-full rounded-2xl shadow-lg"
-                        >
+                    <View className="w-full flex flex-row bg-[#8257E5]  border border-[#B0B0B01A] h-[6rem] rounded-2xl overflow-hidden">
                             <View className="w-[5rem] h-full flex justify-center items-center">
                                 <RaioIcon />
                             </View>
-                        </LinearGradient>
                         <View className="w-auto gap-14 items-center h-full flex flex-row justify-evenly py-2 pl-7">
                             <Text className="text-[18px] font-heading text-white">Nova Recomendação 🎉</Text>
                             <ArrowHorizontal />

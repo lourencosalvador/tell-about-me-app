@@ -21,7 +21,7 @@ const VIDEOS_STORAGE_KEY = 'app_videos';
 
 export default function Video() {
     const navigation = useNavigation();
-    const device = useCameraDevice("back");
+    const device = useCameraDevice("front");
     const { hasPermission, requestPermission } = useCameraPermission();
     const { hasPermission: hasMicPermission, requestPermission: requestMicPermission } = useMicrophonePermission();
     const [permission, setPermission] = useState<null | boolean>(null);
@@ -81,7 +81,7 @@ export default function Video() {
         setShowVideoList(!showVideoList);
     };
 
-    if (permission) return <View><Text>Sem permissão de câmera!</Text></View>;
+    if (!permission) return <View><Text>Sem permissão de câmera!</Text></View>;
     if (!device || device === null) return <View><Text>Câmera não disponível!</Text></View>;
 
     async function startRecording() {

@@ -1,141 +1,107 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, FlatList, Image, Modal, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+// components/VideoGallery.tsx
+import React, { useRef, useState } from 'react';
+import {
+    View,
+    FlatList,
+    Text,
+    Modal,
+    TouchableOpacity,
+    StyleSheet,
+    Dimensions,
+    ActivityIndicator,
+} from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
+import { Image } from 'react-native';
+
 import PlayIcon from '@/src/svg/play-icon';
 import BackButtomIcon from '@/src/svg/back-buttom-icon';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { VideoMetadata } from '@/src/types';
-import { VIDEOS_STORAGE_KEY } from '@/src/lib/key-store';
+import { useGetVideos } from '@/src/services/videos/useVideos';
 import VideoEmptyIcon from '@/src/svg/video-empty-icon';
 
-const { width: widthScreen, height: heightScreen } = Dimensions.get("screen");
+const { width: screenWidth, height: screenHeight } = Dimensions.get('screen');
 
-const VideoGallery = () => {
-    const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+interface Props {
+    userId: string;
+}
+
+const VideoGallery = ({ userId }: Props) => {
     const videoRef = useRef<Video>(null);
+    const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+    const [isVideoLoading, setIsVideoLoading] = useState(false);
 
-    const [videos, setVideos] = useState<VideoMetadata[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [showVideoList, setShowVideoList] = useState(false);
+    const { data: videos, isLoading: isFetchingVideos } = useGetVideos(userId);
 
-    const handleVideoPress = (videoUrl: string) => {
+    const handleVideoPress = (videoId: string) => {
+        const videoUrl = `http://172.20.10.14:6000/videos/${videoId}/stream`;
         setSelectedVideo(videoUrl);
-        setIsLoading(true);
+        setIsVideoLoading(true);
     };
-
-    console.log('videos', videos)
-
-    const fetchVideos = async () => {
-        try {
-            setLoading(true);
-
-            // Buscar vídeos do AsyncStorage
-            const storedVideos = await AsyncStorage.getItem(VIDEOS_STORAGE_KEY);
-
-            if (storedVideos) {
-                const parsedVideos: VideoMetadata[] = JSON.parse(storedVideos);
-                // Converter strings de data para objetos Date
-                const processedVideos = parsedVideos.map(video => ({
-                    ...video,
-                    createdAt: new Date(video.createdAt)
-                }));
-
-                // Ordenar por data (mais recentes primeiro)
-                processedVideos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-                setVideos(processedVideos);
-            } else {
-                setVideos([]);
-            }
-
-            // Delay simulado para mostrar o loading
-            setTimeout(() => {
-                setLoading(false);
-            }, 1000);
-        } catch (error) {
-            console.error("Erro ao buscar vídeos:", error);
-            setLoading(false);
-        }
-    };
-
-    const toggleVideoList = () => {
-        if (!showVideoList) {
-            fetchVideos();
-        }
-        setShowVideoList(!showVideoList);
-    };
-
-    useEffect(() => {
-        toggleVideoList();
-    }, [])
 
     const handleCloseModal = () => {
         setSelectedVideo(null);
-        if (videoRef.current) {
-            videoRef.current.pauseAsync();
-        }
+        videoRef.current?.pauseAsync();
     };
 
+    const renderVideoItem = ({ item }: any) => (
+        <TouchableOpacity onPress={() => handleVideoPress(item.id)} style={styles.videoItem}>
+            <Video
+                source={{ uri: `http://SEU_IP:3333/videos/${item.id}/stream` }}
+                style={styles.video}
+                resizeMode={ResizeMode.COVER}
+                shouldPlay
+                isLooping
+            />
+            <View style={styles.playIconContainer}>
+                <PlayIcon />
+            </View>
+
+        </TouchableOpacity>
+    );
 
     return (
         <View style={styles.container}>
-            {loading ? (
+            {isFetchingVideos ? (
                 <ActivityIndicator size="large" color="#8B5CF6" />
             ) : (
                 <FlatList
                     data={videos}
                     keyExtractor={(item) => item.id}
                     numColumns={2}
-                    columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 10 }}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity onPress={() => handleVideoPress(item.url)} style={styles.videoItem}>
-                            <Video
-                                source={{ uri: item.url }}
-                                style={{ width: "100%", height: 200 }}
-                                className="object-cover"
-                                resizeMode={ResizeMode.COVER}
-                                rate={1.0}
-                                volume={1.0}
-                                shouldPlay
-                                isLooping
-                            />
-                            <View style={styles.playIconContainer}>
-                                <PlayIcon />
-                            </View>
-                        </TouchableOpacity>
-                    )}
+                    scrollEnabled={false}
+                    initialNumToRender={videos.length}
+                    columnWrapperStyle={styles.columnWrapper}
+                    contentContainerStyle={styles.listContent}
+                    renderItem={renderVideoItem}
                     ListEmptyComponent={() => (
-                        <View className='w-full h-full flex justify-center items-center'>
+                        <View className='flex-1 w-full h-full py-20 flex justify-center items-center'>
                             <View className='flex gap-4 items-center'>
                                 <VideoEmptyIcon />
-                                <Text className="text-[13px] font-subtitle text-[#B0B0B0]">Videos</Text>
+                                <Text className="text-[13px] font-subtitle text-[#ffff]">Não á Videos</Text>
                             </View>
                         </View>
                     )}
                 />
-
             )}
 
             <Modal visible={!!selectedVideo} animationType="fade" transparent>
-
-                <View className="flex-1 relative w-screen h-screen">
-                    <TouchableOpacity onPress={handleCloseModal} className='flex flex-row gap-2 items-center size-auto absolute top-24 right-8 z-50 '>
+                <View style={styles.modalContainer}>
+                    <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
                         <BackButtomIcon />
-                        <Text className="text-[16px] font-body text-white">cancelar</Text>
+                        <Text style={styles.closeText}>cancelar</Text>
                     </TouchableOpacity>
-                    {isLoading && (
+
+                    {isVideoLoading && (
                         <ActivityIndicator size="large" color="#FFFFFF" style={styles.loadingIndicator} />
                     )}
 
                     <Video
                         ref={videoRef}
                         source={{ uri: selectedVideo ?? '' }}
-                        style={{ width: widthScreen, height: heightScreen }}
+                        style={styles.fullScreenVideo}
                         useNativeControls
                         resizeMode={ResizeMode.CONTAIN}
                         shouldPlay
-                        onLoad={() => setIsLoading(false)}
+                        onLoad={() => setIsVideoLoading(false)}
                     />
                 </View>
             </Modal>
@@ -144,34 +110,95 @@ const VideoGallery = () => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
+    container: { flex: 1 },
+    columnWrapper: {
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    listContent: {
+        paddingHorizontal: 10,
+        paddingTop: 10,
     },
     videoItem: {
-        position: 'relative',
         width: '48%',
-        height: '50%',
         aspectRatio: 9 / 16,
         borderRadius: 10,
         overflow: 'hidden',
+        backgroundColor: '#000',
     },
-    thumbnail: {
+    video: {
         width: '100%',
-        height: '100%',
-        borderRadius: 10
+        height: 200,
     },
     playIconContainer: {
         position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: [{ translateX: -12 }, { translateY: -12 }]
+        top: '45%',
+        left: '45%',
+        transform: [{ translateX: -12 }, { translateY: -12 }],
+        zIndex: 2,
+    },
+    metaContainer: {
+        padding: 8,
+    },
+    createdAtText: {
+        fontSize: 12,
+        color: '#888',
+    },
+    transcriptionText: {
+        marginTop: 4,
+        fontSize: 13,
+        color: '#333',
+    },
+    noTranscriptionText: {
+        marginTop: 4,
+        fontSize: 13,
+        color: '#aaa',
+    },
+    emptyContainer: {
+        flex: 1,
+        alignItems: 'center',
+        marginTop: 50,
+    },
+    emptyText: {
+        color: '#B0B0B0',
+        fontSize: 16,
+    },
+    modalContainer: {
+        flex: 1,
+        width: screenWidth,
+        height: screenHeight,
+        backgroundColor: 'black',
+    },
+    fullScreenVideo: {
+        width: screenWidth,
+        height: screenHeight,
+    },
+    thumbnail: {
+        width: '100%',
+        height: 200,
+        borderRadius: 10,
+    },
+
+    closeButton: {
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        zIndex: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    closeText: {
+        color: 'white',
+        fontSize: 16,
     },
     loadingIndicator: {
         position: 'absolute',
         top: '50%',
         left: '50%',
-        transform: [{ translateX: -25 }, { translateY: -25 }]
-    }
+        transform: [{ translateX: -25 }, { translateY: -25 }],
+        zIndex: 20,
+    },
 });
 
 export default VideoGallery;

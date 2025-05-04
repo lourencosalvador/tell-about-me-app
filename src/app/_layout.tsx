@@ -25,7 +25,7 @@ export default function Layout() {
   return (
     <QueryProvider>
       <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar barStyle={"light-content"} />
+      <StatusBar barStyle={"light-content"} backgroundColor="black" />
     </QueryProvider>
   );
 }

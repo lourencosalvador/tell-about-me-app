@@ -16,6 +16,12 @@ export interface User {
     createdAt?: Date;
     updatedAt?: Date;
   }
+
+  export interface UserVideo {
+    id: string;
+    createdAt: string;
+    transcription: string | null;
+  }
   
 
   export interface AuthResponse {

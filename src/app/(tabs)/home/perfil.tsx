@@ -3,20 +3,25 @@ import AlertIconPerfil from "@/src/svg/alert-icon-perfil"
 import ArrowUpIcon from "@/src/svg/arrow-up"
 import ConfigIcon from "@/src/svg/config-icon"
 import { View, Text, TouchableOpacity, Image, ScrollView } from "react-native"
-import user from "@/assets/images/studant-bb.jpeg"
 import CameraPerfilIcon from "@/src/svg/camera-perfil-icon"
 import ChatOptionIcon from "@/src/svg/chat-option"
 import HartIPerfilIcon from "@/src/svg/hart-perfil-nav"
 import { useState } from "react"
 import GaleryIcon from "@/src/svg/galery-icon"
-import PlayIcon from "@/src/svg/play-icon"
-import VideoGallery from "../components/videos"
 import { useAuthStore } from "@/src/store/user"
-import VideoEmptyIcon from "@/src/svg/video-empty-icon"
+import { router } from "expo-router"
+import VideoGallery from "../components/videos"
+import { useGetVideos } from "@/src/services/videos/useVideos"
 
 export default function Test() {
-    const { user: userData } = useAuthStore();
+    const { user: userData, logout } = useAuthStore();
     const [active, setActive] = useState("galery")
+    const { data: dataVideos } = useGetVideos(userData?.id ?? '');
+
+    function logoutUser() {
+        logout()
+        router.push('/(stacks)/autentication')
+    }
     return (
         <View className="flex-1 bg-[#161616] pt-20 px-6">
             <View className="w-full justify-between mb-9 flex-row items-center h-auto">
@@ -28,19 +33,23 @@ export default function Test() {
                     </TouchableOpacity>
                 </View>
 
-                <View className="p-3 rounded-xl bg-[#262626]">
-                    <ConfigIcon />
-                </View>
+                <TouchableOpacity
+                    onPress={logoutUser}
+                >
+                    <View className="p-3 rounded-xl bg-[#262626]">
+                        <ConfigIcon />
+                    </View>
+                </TouchableOpacity>
             </View>
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                className="w-full h-auto"
+                className="w-full h-full"
             >
                 <View className="w-full h-auto  flex justify-center items-center ">
                     <View className="size-auto relative mb-4">
                         <View className="w-[8rem] h-[8rem] overflow-hidden rounded-full border-4 border-[#2A2A2E]">
-                            <Image source={{ uri: userData?.photoUrl}}  className="w-[8rem] h-[8rem] object-cover" />
+                            <Image source={{ uri: userData?.photoUrl }} className="w-[8rem] h-[8rem] object-cover" />
                         </View>
                         <View className="p-[0.5rem] rounded-xl bg-[#845AE5] absolute right-0 bottom-0">
                             <CameraPerfilIcon />
@@ -56,7 +65,7 @@ export default function Test() {
 
                         <View className="flex flex-row gap-4 items-center">
                             <View className="flex gap-3 items-center p-2">
-                                <Text className="text-[35px] font-heading text-white">12</Text>
+                                <Text className="text-[35px] font-heading text-white">{dataVideos?.length}</Text>
                                 <Text className="text-[13px] font-subtitle text-[#B0B0B0]">Videos</Text>
                             </View>
 
@@ -91,13 +100,8 @@ export default function Test() {
                         </View>
                     </View>
                 </View>
-                {/* <VideoGallery /> */}
-                                        <View className='flex-1 w-full h-full py-20 flex justify-center items-center'>
-                                            <View className='flex gap-4 items-center'>
-                                                <VideoEmptyIcon />
-                                                <Text className="text-[13px] font-subtitle text-[#ffff]">Não á Videos</Text>
-                                            </View>
-                                        </View>
+                <VideoGallery userId={userData?.id ?? ''} />
+
             </ScrollView>
 
         </View>

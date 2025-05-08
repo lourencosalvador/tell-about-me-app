@@ -9,6 +9,7 @@ export default function Layout() {
             <Stack>
                 <Stack.Screen name="autentication" options={{ headerShown: false }} />
                 <Stack.Screen name="progress" options={{ headerShown: false }} />
+                <Stack.Screen name="maps" options={{ headerShown: false }} />
             </Stack>
             <StatusBar style="dark" />
         </>

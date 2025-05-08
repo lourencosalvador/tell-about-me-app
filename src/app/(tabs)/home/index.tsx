@@ -10,10 +10,12 @@ import { useEffect, useState } from "react";
 import Card from "../components/card";
 import CardRecommendations from "../components/card-recommendations";
 import { useAuthStore } from "@/src/store/user";
+import { useVideoStore } from "@/src/store/video";
 
 export default function Home() {
     const { user: userData } = useAuthStore();
     const [progress, setProgress] = useState(0);
+    const { data: dataVideo } = useVideoStore()
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -24,17 +26,17 @@ export default function Home() {
     }, []);
 
     return (
-        <View className="flex-1 bg-[#161616] pt-20 px-6">
+        <View className="flex-1 bg-[#161616] pt-8 px-6">
             <View className="w-full justify-between mb-6 flex-row items-center h-auto">
                 <View className="flex flex-row gap-4 items-center">
                     <View className="w-[3.5rem] h-[3.5rem] overflow-hidden rounded-full border-2 border-bg-primary">
-                        <Image source={{ uri: userData?.photoUrl}} className="w-[3.5rem] h-[3.5rem] object-cover" />
+                        <Image source={{ uri: userData?.photoUrl }} className="w-[3.5rem] h-[3.5rem] object-cover" />
                     </View>
-                    <Text className="text-[22px] font-heading text-white">Hi, {userData?.name}</Text>
+                    <Text className="text-[18px] font-heading text-white">Hi, {userData?.name}</Text>
                 </View>
                 <View className="size-auto flex flex-row gap-3">
-                    <View className="bg-[#1A1A1E] flex flex-row gap-3 w-[5.5rem] items-center justify-center rounded-lg h-auto py-2">
-                        <Text className="text-[22px] font-heading text-white">0</Text>
+                    <View className="bg-[#1A1A1E] flex flex-row gap-3 w-[5rem] items-center justify-center rounded-lg h-auto py-2">
+                        <Text className="text-[22px] font-heading text-white">2</Text>
                         <HartIcon />
                     </View>
 
@@ -47,10 +49,7 @@ export default function Home() {
                 </View>
             </View>
 
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                className="w-full h-auto"
-            >
+          
                 <LinearGradient
                     colors={['#8257E5', '#493280']}
                     start={{ x: 0, y: 0 }}
@@ -63,13 +62,13 @@ export default function Home() {
                             <TimeHomeIcon />
                             <View className="flex">
                                 <Text className="text-white font-bold text-lg text-[19px] font-heading">25:09:33</Text>
-                                <Text className="text-white text-base">
+                                <Text className="text-white text-base w-[17rem]">
                                     Tempo para receber recomendação de hoje
                                 </Text>
                             </View>
                         </View>
 
-                        <Button title="Vizualizar" className="bg-[#FFFF] text-[#B0B0B0]" />
+                        <Button title="Vizualizar" className="bg-[#FFFF]" classNameText="text-[#FFFF]" />
                     </View>
                 </LinearGradient>
 
@@ -78,29 +77,30 @@ export default function Home() {
                     <ProgressCircle percentage={progress} />
                 </View>
 
+                <ScrollView
+                showsHorizontalScrollIndicator={true}
+                className="w-full h-auto"
+            >
                 <View className="w-full mb-5 h-auto flex gap-4">
                     <Text className="text-[22px] font-heading text-white">Histórico</Text>
                     <View className="w-full h-auto flex flex-row gap-4">
-                        <Card />
-                        <Card />
+                        <Card title="Videos Carregados" value={dataVideo?.length}/>
+                        <Card title="Recomendações" value={0} />
                     </View>
                 </View>
+                </ScrollView>
 
-                <View className="w-full h-auto flex gap-4">
+                {/* <View className="w-full h-auto flex gap-4">
                     <View className="flex flex-row items-center justify-between">
-                        <Text className="text-[20px] font-heading text-white">Recomendações Personalizadas</Text>
-                        <Text className="text-[15px] font-subtitle text-white">Ver tudo</Text>
+                        <Text className="text-[16px] font-heading text-white">Recomendações Personalizadas</Text>
+                        <Text className="text-[12px] font-subtitle text-white">Ver tudo</Text>
                     </View>
                     <View className="w-full h-auto flex gap-4">
                         <CardRecommendations />
                         <CardRecommendations />
                     </View>
-
-                </View>
-
-            </ScrollView>
-
-
+                </View> */}
+            
         </View>
     )
 }

@@ -13,17 +13,16 @@ import { useEffect, useState } from "react";
 
 
 export default function TestCom() {
-    const { user, token, login, logout } = useAuthStore();
+    const { token, login } = useAuthStore();
     const [isNavigationReady, setIsNavigationReady] = useState(false);
 
     useEffect(() => {
-      // Aguarde até que a navegação esteja pronta
       const timer = setTimeout(() => setIsNavigationReady(true), 100);
       return () => clearTimeout(timer);
     }, []);
   
 
-    const { control, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<SignInSchemaType>({
+    const { control, handleSubmit, formState: { errors } } = useForm<SignInSchemaType>({
         resolver: zodResolver(signInSchema),
         defaultValues: {
             email: "",
@@ -47,7 +46,6 @@ export default function TestCom() {
     }
 
  const onSubmit = async (data: SignInSchemaType) => {
-    console.log(data)
        await loginUserFn({
             email: data.email,
             password: data.password

@@ -1,1 +1,1 @@
-export const BASE_URL = "http://172.20.10.14:6000/" 
+export const BASE_URL = "https://9c2f158104f95f4c30157076fa44c7b3.serveo.net/" 

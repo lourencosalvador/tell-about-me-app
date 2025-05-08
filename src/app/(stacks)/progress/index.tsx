@@ -1,40 +1,43 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Dimensions, Alert, Modal } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, Alert } from "react-native";
 import { Camera, useCameraDevice, useCameraPermission, useMicrophonePermission } from 'react-native-vision-camera';
 import { Video as ExpoVideo, ResizeMode } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackButtomIcon from "@/src/svg/back-buttom-icon";
 import { useNavigation } from "@react-navigation/native";
 import PausedVideoIcon from "@/src/svg/paused-video-icon";
+import * as ImagePicker from 'expo-image-picker';
+import { useAuthStore } from "@/src/store/user";
+import { useVideoStore } from "@/src/store/video";
+import { Audio } from 'expo-av'
 
 const { width: widthScreen, height: heightScreen } = Dimensions.get("screen");
 
-// Interface para os metadados do vídeo
+const VIDEOS_STORAGE_KEY = 'app_videos';
+
 interface VideoMetadata {
     id: string;
     url: string;
     createdAt: Date;
     fileName: string;
+    userName: string;
 }
-
-const VIDEOS_STORAGE_KEY = 'app_videos';
 
 export default function Video() {
     const navigation = useNavigation();
+    const { user: userData } = useAuthStore();
     const device = useCameraDevice("front");
     const { hasPermission, requestPermission } = useCameraPermission();
     const { hasPermission: hasMicPermission, requestPermission: requestMicPermission } = useMicrophonePermission();
-    const [permission, setPermission] = useState<null | boolean>(null);
-    const cameraRef = useRef<Camera>(null);
+    const [permission, setPermission] = useState(null);
+    const cameraRef = useRef(null);
     const [isRecording, setIsRecording] = useState(false);
-    const [videoUri, setVideoUri] = useState<string | null>(null);
-    const [modalVisible, setModalVisible] = useState(false)
-
+    const [videoUri, setVideoUri] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [videos, setVideos] = useState<VideoMetadata[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [showVideoList, setShowVideoList] = useState(false);
+
+    const {  setData } = useVideoStore();
 
     useEffect(() => {
         (async () => {
@@ -46,39 +49,31 @@ export default function Video() {
         })();
     }, []);
 
-    const fetchVideos = async () => {
+    const pickVideo = async () => {
         try {
-            setLoading(true);
-            const storedVideos = await AsyncStorage.getItem(VIDEOS_STORAGE_KEY);
-
-            if (storedVideos) {
-                const parsedVideos: VideoMetadata[] = JSON.parse(storedVideos);
-                const processedVideos = parsedVideos.map(video => ({
-                    ...video,
-                    createdAt: new Date(video.createdAt)
-                }));
-
-                processedVideos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-                setVideos(processedVideos);
-            } else {
-                setVideos([]);
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            
+            if (status !== 'granted') {
+                Alert.alert('Permissão necessária', 'É necessário permitir o acesso à galeria para selecionar vídeos.');
+                return;
             }
 
-            setTimeout(() => {
-                setLoading(false);
-            }, 1000);
-        } catch (error) {
-            console.error("Erro ao buscar vídeos:", error);
-            setLoading(false);
-        }
-    };
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+                allowsEditing: false,
+                quality: 1,
+                videoQuality: ImagePicker.UIImagePickerControllerQualityType.High,
+            });
 
-    const toggleVideoList = () => {
-        if (!showVideoList) {
-            fetchVideos();
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                const selectedVideoUri = result.assets[0].uri;
+                setVideoUri(selectedVideoUri);
+                setModalVisible(true);
+            }
+        } catch (error) {
+            console.error("Erro ao selecionar vídeo:", error);
+            Alert.alert("Erro", "Não foi possível selecionar o vídeo da galeria");
         }
-        setShowVideoList(!showVideoList);
     };
 
     if (!permission) return <View><Text>Sem permissão de câmera!</Text></View>;
@@ -91,8 +86,6 @@ export default function Video() {
             onRecordingFinished(video) {
                 setIsRecording(false);
                 setVideoUri(video.path);
-                console.log("Video path:", video.path);
-
                 setModalVisible(true);
             },
             onRecordingError: (error) => {
@@ -110,155 +103,74 @@ export default function Video() {
     }
 
     async function saveVideo() {
-        if (!videoUri) {
-            console.log("Nenhum vídeo para salvar");
+        if (!videoUri || !userData?.name) {
+            Alert.alert("Erro", "Usuário não logado ou vídeo inválido");
             return;
         }
-
+        
         try {
             setUploading(true);
             setUploadProgress(0);
-
-            // Iniciar simulação de progresso
-            const simulateProgress = () => {
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += 20;
-                    setUploadProgress(progress);
-
-                    if (progress >= 100) {
-                        clearInterval(interval);
-                        finalizarSalvamento();
-                    }
-                }, 1000); // 5 segundos no total
-            };
-
-            // Iniciar simulação
-            simulateProgress();
-
-        } catch (error) {
-            console.error("Erro ao iniciar processo de salvamento:", error);
-            setUploading(false);
-            setUploadProgress(0);
-        }
-    } 
-
-
-    async function finalizarSalvamento() {
-        try {
-            // Nome do arquivo extraído do caminho
+            
             const fileName = videoUri?.split('/').pop() || `video_${Date.now()}.mp4`;
-
-            // Criar metadados do vídeo
-            const newVideo: VideoMetadata = {
-                id: Date.now().toString(),
-                url: videoUri!, // Usamos a URL original do vídeo
+            const videoId = Date.now().toString();
+   
+            const newVideo = {
+                id: videoId,
+                url: videoUri,
                 createdAt: new Date(),
-                fileName: fileName
+                fileName: fileName,
+                userName: userData?.name,
             };
-
-            // Buscar vídeos existentes
+            
             const existingVideosString = await AsyncStorage.getItem(VIDEOS_STORAGE_KEY);
-            let videosArray: VideoMetadata[] = [];
-
-            if (existingVideosString) {
-                videosArray = JSON.parse(existingVideosString);
+            let videosArray = existingVideosString ? JSON.parse(existingVideosString) : [];
+            
+            if (!videosArray.some((video: any) => video.id === newVideo.id)) {
+                videosArray.unshift(newVideo);
             }
-
-            // Adicionar novo vídeo
-            videosArray.unshift(newVideo);
-
-            // Salvar no AsyncStorage
-            await AsyncStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(videosArray));
-
-            setUploading(false);
-            setUploadProgress(0);
-            console.log("Vídeo salvo com sucesso!");
-
-            // Limpar o URI do vídeo após salvar
-            setVideoUri(null);
+            
+            const uniqueVideos = Array.from(new Map(videosArray.map((video: any) => [video.id, video])).values());
+            
+            await AsyncStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(uniqueVideos));
+            setData(uniqueVideos);
+            
+            
+            // Simular progresso de upload
+            const interval = setInterval(() => {
+                setUploadProgress(prev => {
+                    if (prev >= 100) {
+                        clearInterval(interval);
+                        return 100;
+                    }
+                    return prev + 10;
+                });
+            }, 200);
+            
+            setTimeout(() => {
+                clearInterval(interval);
+                setUploading(false);
+                setVideoUri(null);
+                setModalVisible(false);
+                Alert.alert("Sucesso", "Vídeo salvo com sucesso!");
+            }, 2000);
+            
         } catch (error) {
-            console.error("Erro ao salvar metadados do vídeo:", error);
+            console.error("Erro ao salvar vídeo:", error);
             setUploading(false);
-            console.log("Erro ao salvar as informações do vídeo");
+            Alert.alert("Erro", "Erro ao salvar o vídeo");
         }
     }
 
-    console.log('videos -->', videos)
-
-
-    function handleClosedModal() {
-        setModalVisible(false)
+    function discardVideo() {
+        setVideoUri(null);
+        setModalVisible(false);
     }
 
-    const deleteSavedVideo = async (videoId: string) => {
-        try {
-            setLoading(true);
-            
-            const updatedVideos = videos.filter(video => video.id !== videoId);
-            
-            await AsyncStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(updatedVideos));
-            
-            setVideos(updatedVideos);
-            
-            setLoading(false);
-            setModalVisible(false)
-            console.log("Vídeo removido com sucesso!");
-        } catch (error) {
-            console.error("Erro ao remover vídeo:", error);
-            setLoading(false);
-            Alert.alert("Erro", "Não foi possível remover o vídeo");
-        }
-    };
-
-    const renderVideoItem = ({ item }: { item: VideoMetadata }) => (
-        <View className="mb-5 bg-[#262626] w-full h-auto rounded-lg overflow-hidden">
-            <ExpoVideo
-                source={{ uri: item.url }}
-                style={{ width: "100%", height: 200 }}
-                className="object-cover"
-                resizeMode={ResizeMode.COVER}
-                rate={1.0}
-                volume={1.0}
-                shouldPlay
-                isLooping
-            />
-        </View>
-    );
-
-    if (showVideoList) {
-        return (
-            <View className="flex-1 bg-[#161616] pt-12 px-4">
-                <TouchableOpacity
-                    className="bg-violet-600 p-3 rounded-md self-start mt-2"
-                    onPress={toggleVideoList}
-                >
-                    <Text className="text-white font-bold">Voltar para Câmera</Text>
-                </TouchableOpacity>
-
-                <Text className="text-2xl font-bold text-white my-5 text-center">Meus Vídeos</Text>
-
-                {loading ? (
-                    <ActivityIndicator size="large" color="#8B5CF6" />
-                ) : videos.length > 0 ? (
-                    <FlatList
-                        data={videos}
-                        renderItem={renderVideoItem}
-                        keyExtractor={(item) => item.id}
-                        contentContainerStyle={{ paddingBottom: 20 }}
-                    />
-                ) : (
-                    <Text className="text-white text-center mt-12">Nenhum vídeo encontrado</Text>
-                )}
-            </View>
-        );
-    }
-
-    console.log('video her ---> ', videos)
+    
 
     return (
         <View className="flex-1 bg-[#161616] pt-20 px-6 relative">
-
             <Camera
                 style={StyleSheet.absoluteFill}
                 ref={cameraRef}
@@ -272,44 +184,50 @@ export default function Video() {
             <TouchableOpacity
                 onPress={() => navigation.goBack()}
                 activeOpacity={0.7}
-                className="absolute top-0 hover:cursor-pointer right-0 p-4 flex items-center gap-2 flex-row size-auto">
+                className="absolute top-8 hover:cursor-pointer right-0 p-4 flex items-center gap-2 flex-row size-auto">
                 <BackButtomIcon />
-                <Text className="text-white font-bold">Cancelar</Text>
+                <Text className="text-bg-primary font-bold">Cancelar</Text>
             </TouchableOpacity>
 
             {uploading ? (
                 <View className="absolute inset-0 bg-black/70 justify-center items-center">
-                    <Text className="text-white text-base mb-5">Salvando vídeo: {uploadProgress.toFixed(0)}%</Text>
-                    <ActivityIndicator size="large" color="#FFFFFF" />
+                    <Text className="text-white text-xl mb-2">Salvando vídeo</Text>
+                    <Text className="text-white text-base mb-5">Progresso: {uploadProgress.toFixed(0)}%</Text>
+                    <ActivityIndicator size="large" color="#8B5CF6" />
                 </View>
             ) : (
-                <>
-                    {isRecording ? (
-                        <View className="size-auto flex gap-3 bottom-[50px] left-48 absolute  items-center justify-center">
+                <View className="absolute bottom-12 w-full flex-row justify-center items-center gap-8 left-4">
+                    <View className="flex items-center">
+                        {isRecording ? (
                             <TouchableOpacity
                                 onPress={stopRecording}
-                                className={`w-[70px] h-[70px] border-4 flex justify-center items-center border-white rounded-full  ${isRecording ? 'border-2 border-red-500' : ''}`}
+                                className={`w-[70px] h-[70px] border-4 flex justify-center items-center border-red-500 rounded-full`}
                             >
                                 <PausedVideoIcon />
                             </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <View className="size-auto flex gap-3 bottom-[50px] left-48 absolute  items-center justify-center">
+                        ) : (
                             <TouchableOpacity
                                 onPress={startRecording}
-
-                                className={`w-[70px] h-[70px] border-4 flex justify-center items-center border-white bg-violet-600  rounded-full  ${isRecording ? 'border-2 border-red-500' : ''}`}
+                                className={`w-[70px] h-[70px] border-4 flex justify-center items-center border-white bg-violet-600 rounded-full`}
                             />
-                            <Text className="text-white font-bold">Vídeos</Text>
-                        </View>
-                    )}
-                </>
+                        )}
+                        <Text className="text-white font-bold mt-2">Video</Text>
+                    </View>
+                    
+                    <View className="flex items-center">
+                        <TouchableOpacity
+                            onPress={pickVideo}
+                            className={`w-[70px] h-[70px] border-4 flex justify-center items-center border-white bg-blue-500 rounded-full`}
+                        >
+                            <Text className="text-white text-3xl">+</Text>
+                        </TouchableOpacity>
+                        <Text className="text-white font-bold mt-2">Upload</Text>
+                    </View>
+                </View>
             )}
 
-            { videoUri && modalVisible && (
-                <View
-                   className="absolute inset-0 bg-black/70 justify-center items-center"
-                >
+            {videoUri && modalVisible && (
+                <View className="absolute inset-0 bg-black/70 justify-center items-center">
                     <View className="flex-1 w-screen h-screen">
                         <ExpoVideo
                             source={{ uri: videoUri }}
@@ -322,18 +240,18 @@ export default function Video() {
                             isLooping
                         />
 
-                        <View className="absolute top-0 left-0 p-4 flex flex-row items-center gap-3">
+                        <View className="absolute top-0 -left-6 p-12 flex flex-row items-center gap-3">
                             <TouchableOpacity
                                 onPress={saveVideo}
-                                className="w-[8rem] gap-1 flex-row h-[3rem] bg-bg-primary rounded-[0.75rem] flex justify-center items-center"
+                                className="w-[8rem] gap-1 flex-row h-[3rem] bg-violet-600 rounded-[0.75rem] flex justify-center items-center"
                             >
                                 <Text className="text-[#FFFFFF] text-[14px] font-semibold">Salvar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => deleteSavedVideo(videoUri)}
+                                onPress={discardVideo}
                                 className="w-[8rem] gap-1 flex-row h-[3rem] bg-red-500 rounded-[0.75rem] flex justify-center items-center"
                             >
-                                <Text className="text-[#FFFFFF] text-[14px] font-semibold">Apagar</Text>
+                                <Text className="text-[#FFFFFF] text-[14px] font-semibold">Descartar</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

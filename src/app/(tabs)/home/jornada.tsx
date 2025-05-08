@@ -12,7 +12,7 @@ const years = [
 
 export default function Test() {
   return (
-    <View className="flex-1 bg-[#161616] pt-20 px-6">
+    <View className="flex-1 bg-[#161616] pt-8 px-6">
       <FlatList
         data={years}
         keyExtractor={(item) => item.id}

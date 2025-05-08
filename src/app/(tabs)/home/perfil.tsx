@@ -11,23 +11,31 @@ import GaleryIcon from "@/src/svg/galery-icon"
 import { useAuthStore } from "@/src/store/user"
 import { router } from "expo-router"
 import VideoGallery from "../components/videos"
-import { useGetVideos } from "@/src/services/videos/useVideos"
+import { useVideoStore } from "@/src/store/video"
+import { Modal } from "react-native"
+import BackButtomCv from "@/src/svg/back-buttom-cv"
+import HartIcon from "@/src/svg/hart-icon"
+import NotificationIcon from "@/src/svg/notification-icon"
+import ChatCv from "@/src/svg/chat-cv"
+import ButtomCv from "@/src/svg/cv-buttom"
+import CVGenerator from "../../components/cv-generator"
 
 export default function Test() {
     const { user: userData, logout } = useAuthStore();
     const [active, setActive] = useState("galery")
-    const { data: dataVideos } = useGetVideos(userData?.id ?? '');
+    const { data: dataVideo } = useVideoStore()
+    const [modalVisible, setModalVisible] = useState(false);
 
     function logoutUser() {
         logout()
         router.push('/(stacks)/autentication')
     }
     return (
-        <View className="flex-1 bg-[#161616] pt-20 px-6">
+        <View className="flex-1 bg-[#161616] pt-8 px-6">
             <View className="w-full justify-between mb-9 flex-row items-center h-auto">
                 <View className="flex flex-row gap-3">
                     <AlertIconPerfil />
-                    <TouchableOpacity className="w-[8rem] gap-1  flex-row h-[3rem] bg-bg-primary rounded-[0.75rem] flex justify-center items-center">
+                    <TouchableOpacity onPress={() => setModalVisible(true)} className="w-[8rem] gap-1  flex-row h-[3rem] bg-bg-primary rounded-[0.75rem] flex justify-center items-center">
                         <Text className={`text-[#FFFFFF] text-[14px] font-semibold`}>Curriculo</Text>
                         <ArrowUpIcon />
                     </TouchableOpacity>
@@ -41,6 +49,48 @@ export default function Test() {
                     </View>
                 </TouchableOpacity>
             </View>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => {
+                    setModalVisible(false);
+                }}
+            >
+                <View className="flex-1 bg-[#161616] pt-8 px-6">
+                    {/*  */}
+                    <View className="flex flex-row w-full justify-between items-center mb-10">
+                        <TouchableOpacity onPress={() => setModalVisible(false)}>
+                            <BackButtomCv />
+                        </TouchableOpacity>
+
+                        <View className="flex flex-row gap-3">
+                            <View className="bg-[#1A1A1E] flex flex-row gap-3 w-[5.5rem] items-center justify-center rounded-lg py-2">
+                                <Text className="text-[22px] font-heading text-white">0</Text>
+                                <HartIcon />
+                            </View>
+
+                            <View className="bg-[#1A1A1E] relative flex flex-row gap-3 items-center justify-center rounded-lg py-3 px-4">
+                                <View className="absolute text-center top-0 left-0 flex items-center w-10 z-30 bg-bg-primary rounded-full">
+                                    <Text className="text-[16px] font-heading text-white">9+</Text>
+                                </View>
+                                <NotificationIcon />
+                            </View>
+                        </View>
+                    </View>
+
+                    <View className="flex w-full h-auto gap-2 mb-8">
+                    <Text className="text-[12px] font-heading text-[#DADADA]">Currículo Profissional</Text>
+                      <Text className="text-[22px] font-heading text-white">Muitos Parabéns, Lorrys 🎉</Text>
+                    </View>
+
+                    <View className="flex w-full h-auto gap-8">
+                        <ChatCv />
+                        <CVGenerator />
+                    </View>
+                </View>
+            </Modal>
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
@@ -60,12 +110,12 @@ export default function Test() {
                     <View className="flex mb-8 gap-5 w-full h-auto justify-center items-center">
                         <View className="flex gap-2 items-center">
                             <Text className="text-[18px] font-heading text-white">@{userData?.name}</Text>
-                            <Text className="text-[16.5px] font-subtitle text-[#B0B0B0]">Junior Front-End Developer</Text>
+                            {/* <Text className="text-[16.5px] font-subtitle text-[#B0B0B0]">Junior Front-End Developer</Text> */}
                         </View>
 
                         <View className="flex flex-row gap-4 items-center">
                             <View className="flex gap-3 items-center p-2">
-                                <Text className="text-[35px] font-heading text-white">{dataVideos?.length}</Text>
+                                <Text className="text-[35px] font-heading text-white">{dataVideo?.length}</Text>
                                 <Text className="text-[13px] font-subtitle text-[#B0B0B0]">Videos</Text>
                             </View>
 

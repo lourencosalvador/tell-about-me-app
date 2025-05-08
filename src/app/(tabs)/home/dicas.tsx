@@ -9,6 +9,7 @@ import VoiceIcon from "@/src/svg/voice-icon";
 import ArrowHorizontal from "@/src/svg/arrow-horizontal";
 import RaioIcon from "@/src/svg/raio-icon";
 import * as Speech from 'expo-speech';
+import { router } from "expo-router";
 // import elipse from "@/assets/images/elipse.png"
 
 export default function Test() {
@@ -62,8 +63,11 @@ export default function Test() {
                         </View>
                     </View>
                 </View>
+                <TouchableOpacity onPress={() => router.push("/(stacks)/maps")}>
+                    <Text>Maps</Text>
+                </TouchableOpacity>
 
-                <View className="flex gap-8">
+                {/* <View className="flex gap-8">
                     <View className="w-full flex flex-row bg-[#8257E5] border border-[#B0B0B01A] h-[6rem] rounded-2xl overflow-hidden">
                             <View className="w-[5rem] h-full flex justify-center items-center">
                                 <RaioIcon />
@@ -82,7 +86,7 @@ export default function Test() {
                             <ArrowHorizontal />
                         </View>
                     </View>
-                </View>
+                </View> */}
             </View>
         </View>
     )

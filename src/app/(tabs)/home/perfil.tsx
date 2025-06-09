@@ -1,4 +1,3 @@
-
 import AlertIconPerfil from "@/src/svg/alert-icon-perfil"
 import ArrowUpIcon from "@/src/svg/arrow-up"
 import ConfigIcon from "@/src/svg/config-icon"
@@ -11,7 +10,7 @@ import GaleryIcon from "@/src/svg/galery-icon"
 import { useAuthStore } from "@/src/store/user"
 import { router } from "expo-router"
 import VideoGallery from "../components/videos"
-import { useVideoStore } from "@/src/store/video"
+import { useUserVideos } from "@/src/services/videos/useVideos"
 import { Modal } from "react-native"
 import BackButtomCv from "@/src/svg/back-buttom-cv"
 import HartIcon from "@/src/svg/hart-icon"
@@ -19,17 +18,30 @@ import NotificationIcon from "@/src/svg/notification-icon"
 import ChatCv from "@/src/svg/chat-cv"
 import ButtomCv from "@/src/svg/cv-buttom"
 import CVGenerator from "../../components/cv-generator"
+import { useFavorites } from "@/src/services/favorites/useFavorites"
+import NotificationButton from "@/src/components/NotificationButton"
+import { useNotificationSender } from "@/src/hooks/useNotifications"
 
 export default function Test() {
     const { user: userData, logout } = useAuthStore();
     const [active, setActive] = useState("galery")
-    const { data: dataVideo } = useVideoStore()
+    const { data: userVideos = [] } = useUserVideos(userData?.id || '');
+    const { favoriteCount } = useFavorites();
     const [modalVisible, setModalVisible] = useState(false);
 
     function logoutUser() {
         logout()
         router.push('/(stacks)/autentication')
     }
+
+    function handleEditProfile() {
+        router.push('/(stacks)/profile/edit');
+    }
+
+    function handlePhotoPress() {
+        router.push('/(stacks)/profile/edit');
+    }
+
     return (
         <View className="flex-1 bg-[#161616] pt-8 px-6">
             <View className="w-full justify-between mb-9 flex-row items-center h-auto">
@@ -71,12 +83,7 @@ export default function Test() {
                                 <HartIcon />
                             </View>
 
-                            <View className="bg-[#1A1A1E] relative flex flex-row gap-3 items-center justify-center rounded-lg py-3 px-4">
-                                <View className="absolute text-center top-0 left-0 flex items-center w-10 z-30 bg-bg-primary rounded-full">
-                                    <Text className="text-[16px] font-heading text-white">9+</Text>
-                                </View>
-                                <NotificationIcon />
-                            </View>
+                            <NotificationButton />
                         </View>
                     </View>
 
@@ -98,14 +105,18 @@ export default function Test() {
             >
                 <View className="w-full h-auto  flex justify-center items-center ">
                     <View className="size-auto relative mb-4">
-                        <View className="w-[8rem] h-[8rem] overflow-hidden rounded-full border-4 border-[#2A2A2E]">
-                            <Image source={{ uri: userData?.photoUrl }} className="w-[8rem] h-[8rem] object-cover" />
-                        </View>
-                        <View className="p-[0.5rem] rounded-xl bg-[#845AE5] absolute right-0 bottom-0">
-                            <CameraPerfilIcon />
-                        </View>
+                        <TouchableOpacity 
+                            onPress={handlePhotoPress}
+                            activeOpacity={0.8}
+                        >
+                            <View className="w-[8rem] h-[8rem] overflow-hidden rounded-full border-4 border-[#2A2A2E]">
+                                <Image source={{ uri: userData?.photoUrl }} className="w-[8rem] h-[8rem] object-cover" />
+                            </View>
+                            <View className="p-[0.5rem] rounded-xl bg-[#845AE5] absolute right-0 bottom-0">
+                                <CameraPerfilIcon />
+                            </View>
+                        </TouchableOpacity>
                     </View>
-
 
                     <View className="flex mb-8 gap-5 w-full h-auto justify-center items-center">
                         <View className="flex gap-2 items-center">
@@ -115,21 +126,24 @@ export default function Test() {
 
                         <View className="flex flex-row gap-4 items-center">
                             <View className="flex gap-3 items-center p-2">
-                                <Text className="text-[35px] font-heading text-white">{dataVideo?.length}</Text>
+                                <Text className="text-[35px] font-heading text-white">{userVideos.length}</Text>
                                 <Text className="text-[13px] font-subtitle text-[#B0B0B0]">Videos</Text>
                             </View>
 
                             <View className="h-[4rem] w-[0.1rem] bg-[#FFFFFF4D]" />
 
                             <View className="flex gap-3 items-center p-2">
-                                <Text className="text-[32px] font-heading text-white">30</Text>
-                                <Text className="text-[13px] font-subtitle text-[#B0B0B0]">Recomendação</Text>
+                                <Text className="text-[32px] font-heading text-white">{favoriteCount}</Text>
+                                <Text className="text-[13px] font-subtitle text-[#B0B0B0]">Favoritos</Text>
                             </View>
                         </View>
 
-                        <TouchableOpacity className="w-[22rem] h-[3rem] bg-[#F6F6F6] flex justify-center items-center flex-row gap-4 rounded-full border-[0.1rem]  border-[#8258E5]">
+                        <TouchableOpacity 
+                            onPress={handleEditProfile}
+                            className="w-[22rem] h-[3rem] bg-[#F6F6F6] flex justify-center items-center flex-row gap-4 rounded-full border-[0.1rem]  border-[#8258E5]"
+                        >
                             <ChatOptionIcon />
-                            <Text className="text-[#8258E5] text-lg">Editar Perdil</Text>
+                            <Text className="text-[#8258E5] text-lg">Editar Perfil</Text>
                         </TouchableOpacity>
 
                         <View className="w-full border-b border-b-[#FFFFFF4D] h-20 flex justify-evenly items-center flex-row">
@@ -146,14 +160,70 @@ export default function Test() {
                                     <View className="w-full h-1 bottom-0 left-0 absolute  bg-slate-100 rounded-full" />
                                 }
                             </TouchableOpacity>
-
                         </View>
                     </View>
                 </View>
-                <VideoGallery userId={userData?.id ?? ''} />
 
+                {active === 'galery' ? (
+                    <VideoGallery userId={userData?.id ?? ''} />
+                ) : (
+                    // Mostrar favoritos quando a aba "hart" estiver ativa
+                    <View className="py-8">
+                        <Text className="text-white text-center text-lg">
+                            Em breve: visualização de favoritos aqui
+                        </Text>
+                    </View>
+                )}
+
+                {/* Seção de Teste de Notificações - Comentada temporariamente */}
+                {/* <TestNotificationSection /> */}
             </ScrollView>
-
         </View>
     )
 }
+
+// Componente para testar notificações - Comentado temporariamente
+/*
+function TestNotificationSection() {
+    const { sendRecommendationNotification, sendStreakNotification } = useNotificationSender();
+
+    const testRecommendationNotification = async () => {
+        await sendRecommendationNotification({
+            area_recomendada: "Farmacologia Clínica",
+            justificativa: "Baseado nos seus estudos recentes sobre medicamentos e suas interações, recomendamos focar em farmacologia clínica para aprofundar seus conhecimentos."
+        });
+    };
+
+    const testStreakNotification = async () => {
+        await sendStreakNotification(7, 7);
+    };
+
+    return (
+        <View className="mt-8 p-4 bg-gray-800 rounded-2xl mx-2">
+            <Text className="text-white text-lg font-semibold mb-4 text-center">
+                🧪 Teste de Notificações
+            </Text>
+            
+            <View className="space-y-3">
+                <TouchableOpacity
+                    onPress={testRecommendationNotification}
+                    className="bg-blue-500 p-3 rounded-xl"
+                >
+                    <Text className="text-white font-medium text-center">
+                        📚 Testar Notificação de Recomendação
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    onPress={testStreakNotification}
+                    className="bg-orange-500 p-3 rounded-xl"
+                >
+                    <Text className="text-white font-medium text-center">
+                        🔥 Testar Notificação de Streak
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+}
+*/

@@ -1,5 +1,5 @@
 import HartIcon from "@/src/svg/hart-icon";
-import NotificationIcon from "@/src/svg/notification-icon";
+import NotificationButton from "@/src/components/NotificationButton";
 import { View, Text, FlatList } from "react-native";
 import { YearBlock } from "../components/jornada-items";
 
@@ -31,12 +31,7 @@ export default function Test() {
                 <HartIcon />
               </View>
 
-              <View className="bg-[#1A1A1E] relative flex flex-row gap-3 items-center justify-center rounded-lg py-3 px-4">
-                <View className="absolute text-center top-0 left-0 flex items-center w-10 z-30 bg-bg-primary rounded-full">
-                  <Text className="text-[16px] font-heading text-white">9+</Text>
-                </View>
-                <NotificationIcon />
-              </View>
+              <NotificationButton />
             </View>
           </View>
         )}

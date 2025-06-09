@@ -32,6 +32,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-notifications",
       [
         "expo-custom-assets",
         {
@@ -61,13 +62,6 @@
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
         }
-      ],
-      [
-        "expo-maps",
-        {
-          "requestLocationPermission": "true",
-          "locationPermission": "Allow $(PRODUCT_NAME) to use your location"
-        } 
       ],
       [
         "expo-media-library",

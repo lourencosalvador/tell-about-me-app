@@ -1,4 +1,4 @@
-import api from "@/src/api/client"
+import { api } from "@/src/api/client"
 import { AuthResponse, User } from "@/src/types"
 
 const create = async (data: User) => {

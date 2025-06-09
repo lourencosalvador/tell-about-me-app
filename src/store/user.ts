@@ -8,6 +8,8 @@ interface User {
   email: string;
   class: string;
   photoUrl: string;
+  recommendation?: any;
+  streak?: number;
 }
 
 interface AuthState {
@@ -46,12 +48,12 @@ export const useAuthStore = create<AuthState>()(
         })),
     }),
     {
-      name: 'auth-storage', // Nome do storage
-      storage: createJSONStorage(() => AsyncStorage), // Usando AsyncStorage no React Native
+      name: 'auth-storage',
+      storage: createJSONStorage(() => AsyncStorage), 
       partialize: (state) => ({ 
         user: state.user, 
         token: state.token 
-      }), // O que será persistido
+      }), 
     }
   )
 );

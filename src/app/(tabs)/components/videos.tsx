@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
     View,
     FlatList,
@@ -8,26 +8,18 @@ import {
     StyleSheet,
     Dimensions,
     ActivityIndicator,
+    Alert,
 } from 'react-native';
 import { Video as ExpoVideo, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import PlayIcon from '@/src/svg/play-icon';
 import BackButtomIcon from '@/src/svg/back-buttom-icon';
 import VideoEmptyIcon from '@/src/svg/video-empty-icon';
-import { useAuthStore } from '@/src/store/user';
-import { useVideoStore } from '@/src/store/video';
+import { useUserVideos, useDeleteVideo } from '@/src/services/videos/useVideos';
+import { UserVideo } from '@/src/types';
+import FavoriteButton from '@/src/components/FavoriteButton';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('screen');
 
-interface VideoMetadata {
-    id: string;
-    url: string;
-    createdAt: Date;
-    fileName: string;
-    userName: string;
-}
-
-const VIDEOS_STORAGE_KEY = 'app_videos';
 const MAX_CONCURRENT_VIDEOS = 4;
 
 interface Props {
@@ -36,65 +28,15 @@ interface Props {
 
 const VideoGallery = ({ userId }: Props) => {
     const videoRef = useRef<ExpoVideo>(null);
-    const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+    const [selectedVideo, setSelectedVideo] = useState<UserVideo | null>(null);
     const [isVideoLoading, setIsVideoLoading] = useState(false);
-    const [isFetchingVideos, setIsFetchingVideos] = useState(true);
-    const { user: userData } = useAuthStore();
-    const { data: dataVideo, setData } = useVideoStore()
-    const [localVideos, setLocalVideos] = useState<VideoMetadata[]>([]);
+    
+    // React Query hooks
+    const { data: videos = [], isLoading: isFetchingVideos, error, refetch } = useUserVideos(userId);
+    const deleteVideoMutation = useDeleteVideo();
 
-    const fetchVideos = useCallback(async () => {
-        setIsFetchingVideos(true);
-        try {
-            const storedVideos = await AsyncStorage.getItem(VIDEOS_STORAGE_KEY);
-            if (storedVideos) {
-                try {
-                    const parsedVideos = JSON.parse(storedVideos);
-                    if (!Array.isArray(parsedVideos)) {
-                        console.warn("Dados de vídeo não são um array");
-                        setLocalVideos([]);
-                        setData([]);
-                        return;
-                    }
-
-                    const userVideos = parsedVideos
-                        .filter((video: VideoMetadata) => video.userName === userData?.name)
-                        .map((video: any) => ({
-                            ...video,
-                            createdAt: new Date(video.createdAt),
-                            url: video.url.startsWith('file://') ? video.url : `file://${video.url}`
-                        }));
-
-                    userVideos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-                    // Atualize ambos os estados
-                    setLocalVideos(userVideos);
-                    setData(userVideos);
-                } catch (jsonError) {
-                    console.error("Erro ao parsear vídeos:", jsonError);
-                    await AsyncStorage.removeItem(VIDEOS_STORAGE_KEY);
-                    setLocalVideos([]);
-                    setData([]);
-                }
-            } else {
-                setLocalVideos([]);
-                setData([]);
-            }
-        } catch (error) {
-            console.error("Erro ao buscar vídeos:", error);
-            setLocalVideos([]);
-            setData([]);
-        } finally {
-            setIsFetchingVideos(false);
-        }
-    }, [userData?.name, setData]);
-
-    useEffect(() => {
-        fetchVideos()
-    }, [fetchVideos]);
-
-    const handleVideoPress = useCallback((videoUri: string) => {
-        setSelectedVideo(videoUri);
+    const handleVideoPress = useCallback((video: UserVideo) => {
+        setSelectedVideo(video);
         setIsVideoLoading(true);
     }, []);
 
@@ -111,55 +53,118 @@ const VideoGallery = ({ userId }: Props) => {
     }, []);
 
     const deleteVideo = useCallback(async () => {
-        if (!selectedVideo) return;
+        if (!selectedVideo?.id) return;
 
-        try {
-            const updatedVideos = localVideos.filter((video) => video.url !== selectedVideo);
-            await AsyncStorage.setItem(VIDEOS_STORAGE_KEY, JSON.stringify(updatedVideos));
-            setLocalVideos(updatedVideos);
-            setData(updatedVideos)
+        Alert.alert(
+            "Confirmar exclusão",
+            "Tem certeza que deseja excluir este vídeo?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Excluir",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await deleteVideoMutation.mutateAsync(selectedVideo.id);
             handleCloseModal();
         } catch (error) {
-            console.error("Erro ao excluir vídeo:", error);
+                            Alert.alert("Erro", "Não foi possível excluir o vídeo");
         }
+                    }
+                }
+            ]
+        );
+    }, [selectedVideo, deleteVideoMutation, handleCloseModal]);
 
-    }, [selectedVideo, localVideos, handleCloseModal]);
-
-    useEffect(() => {
-        setLocalVideos(dataVideo);
-    }, [dataVideo]);
-
-
-    const renderVideoItem = useCallback(({ item }: { item: VideoMetadata }) => (
+    const renderVideoItem = useCallback(({ item }: { item: UserVideo }) => (
         <TouchableOpacity
-            onPress={() => handleVideoPress(item.url)}
+            onPress={() => handleVideoPress(item)}
             style={styles.videoItem}
             activeOpacity={0.7}
         >
+            {item.url ? (
             <ExpoVideo
                 source={{ uri: item.url }}
                 style={styles.video}
                 resizeMode={ResizeMode.COVER}
                 isMuted
+                    shouldPlay={false}
+                    progressUpdateIntervalMillis={500}
                 onError={(error) => {
-                    console.error("Erro no vídeo:", error);
-                    setSelectedVideo(null);
+                        console.error("❌ Erro no vídeo:", error);
+                        console.error("📹 URL do vídeo:", item.url);
+                    }}
+                    onLoad={(status) => {
+                        console.log("✅ Vídeo carregado:", item.id);
+                        console.log("📹 URL:", item.url);
                 }}
-                onLoadStart={() => console.log(`Carregando: ${item.fileName}`)}
+                    onLoadStart={() => {
+                        console.log("⏳ Iniciando carregamento do vídeo:", item.id);
+                        console.log("📹 URL:", item.url);
+                    }}
+                    onPlaybackStatusUpdate={(status) => {
+                        if ('error' in status && status.error) {
+                            console.error("❌ Erro no playback status:", status.error);
+                        }
+                        if (status.isLoaded && status.didJustFinish) {
+                            console.log("✅ Vídeo terminou");
+                        }
+                    }}
             />
+            ) : (
+                <View style={styles.videoPlaceholder}>
+                    <VideoEmptyIcon />
+                    <Text style={styles.noUrlText}>Sem URL</Text>
+                </View>
+            )}
+            
+            {/* Botão de favorito */}
+            <View style={styles.favoriteButtonContainer}>
+                <FavoriteButton
+                    videoId={item.id}
+                    videoUrl={item.url}
+                    transcription={item.audio?.transcription?.text}
+                    size={18}
+                    activeColor="#FF4757"
+                    inactiveColor="rgba(255, 255, 255, 0.7)"
+                />
+            </View>
+            
             <View style={styles.playIconContainer}>
                 <PlayIcon />
             </View>
+            {item.duration && (
+                <View style={styles.durationContainer}>
+                    <Text style={styles.durationText}>
+                        {Math.floor(item.duration / 60)}:{(item.duration % 60).toString().padStart(2, '0')}
+                    </Text>
+                </View>
+            )}
         </TouchableOpacity>
     ), [handleVideoPress]);
+
+    if (error) {
+        return (
+            <View style={styles.errorContainer}>
+                <VideoEmptyIcon />
+                <Text style={styles.errorText}>Erro ao carregar vídeos</Text>
+                <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
+                    <Text style={styles.retryText}>Tentar novamente</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
             {isFetchingVideos ? (
+                <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#8B5CF6" />
+                    <Text style={styles.loadingText}>Carregando vídeos...</Text>
+                </View>
             ) : (
                 <FlatList
-                    data={localVideos}
+                    data={videos}
                     keyExtractor={(item) => item.id}
                     numColumns={2}
                     scrollEnabled={false}
@@ -174,7 +179,10 @@ const VideoGallery = ({ userId }: Props) => {
                         <View style={styles.emptyContainer}>
                             <View style={styles.emptyContent}>
                                 <VideoEmptyIcon />
-                                <Text style={styles.emptyText}>Não há vídeos</Text>
+                                <Text style={styles.emptyText}>Nenhum vídeo encontrado</Text>
+                                <Text style={styles.emptySubText}>
+                                    Grave seu primeiro vídeo para começar!
+                                </Text>
                             </View>
                         </View>
                     )}
@@ -188,25 +196,29 @@ const VideoGallery = ({ userId }: Props) => {
                 onRequestClose={handleCloseModal}
             >
                 <View style={styles.modalContainer}>
-                    <View className='w-full h-auto flex-row justify-between items-center absolute top-12 px-4'>
+                    <View style={styles.modalHeader}>
                     <TouchableOpacity
                             onPress={deleteVideo}
-                            style={styles.deleteButton}
+                            style={[styles.actionButton, styles.deleteButton]}
                             activeOpacity={0.7}
+                            disabled={deleteVideoMutation.isPending}
                         >
+                            {deleteVideoMutation.isPending ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                            ) : (
                             <Text style={styles.deleteText}>Excluir vídeo</Text>
+                            )}
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             onPress={handleCloseModal}
-                            style={styles.closeButton}
+                            style={[styles.actionButton, styles.closeButton]}
                             activeOpacity={0.7}
                         >
                             <BackButtomIcon />
-                            <Text style={styles.closeText}>cancelar</Text>
+                            <Text style={styles.closeText}>Fechar</Text>
                         </TouchableOpacity>
                     </View>
-
 
                     {isVideoLoading && (
                         <ActivityIndicator
@@ -216,19 +228,30 @@ const VideoGallery = ({ userId }: Props) => {
                         />
                     )}
 
+                    {selectedVideo?.url && (
                     <ExpoVideo
                         ref={videoRef}
-                        source={{ uri: selectedVideo ?? '' }}
+                            source={{ uri: selectedVideo.url }}
                         style={styles.fullScreenVideo}
                         useNativeControls
                         resizeMode={ResizeMode.CONTAIN}
                         shouldPlay
+                            progressUpdateIntervalMillis={500}
                         onLoad={handleVideoLoad}
                         onError={(error) => {
-                            console.error("Erro no player:", error);
-                            handleCloseModal();
+                                console.error("❌ Erro no player:", error);
+                                console.error("📹 URL:", selectedVideo.url);
+                            }}
+                            onPlaybackStatusUpdate={(status) => {
+                                if ('error' in status && status.error) {
+                                    console.error("❌ Erro no playback status:", status.error);
+                                }
+                                if (status.isLoaded && status.didJustFinish) {
+                                    console.log("✅ Vídeo terminou");
+                                }
                         }}
                     />
+                    )}
                 </View>
             </Modal>
         </View>
@@ -237,6 +260,40 @@ const VideoGallery = ({ userId }: Props) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    loadingText: {
+        color: '#fff',
+        marginTop: 10,
+        fontSize: 14,
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    errorText: {
+        color: '#fff',
+        fontSize: 16,
+        marginTop: 16,
+        marginBottom: 12,
+    },
+    retryButton: {
+        backgroundColor: '#8B5CF6',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    retryText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+    },
     columnWrapper: {
         justifyContent: 'space-between',
         marginBottom: 10,
@@ -252,10 +309,24 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         overflow: 'hidden',
         backgroundColor: '#000',
+        position: 'relative',
     },
     video: {
         width: '100%',
         height: '100%',
+    },
+    videoPlaceholder: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#2A2A2E',
+    },
+    favoriteButtonContainer: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        zIndex: 2,
     },
     playIconContainer: {
         position: 'absolute',
@@ -264,10 +335,23 @@ const styles = StyleSheet.create({
         transform: [{ translateX: -12 }, { translateY: -12 }],
         zIndex: 2,
     },
+    durationContainer: {
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    durationText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
     emptyContainer: {
         flex: 1,
         width: '100%',
-        height: '100%',
         paddingVertical: 80,
         justifyContent: 'center',
         alignItems: 'center',
@@ -277,8 +361,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     emptyText: {
-        fontSize: 13,
+        fontSize: 16,
         color: '#fff',
+        fontWeight: '600',
+    },
+    emptySubText: {
+        fontSize: 14,
+        color: '#9CA3AF',
+        textAlign: 'center',
     },
     modalContainer: {
         flex: 1,
@@ -286,21 +376,43 @@ const styles = StyleSheet.create({
         height: screenHeight,
         backgroundColor: 'black',
     },
-    fullScreenVideo: {
-        width: screenWidth,
-        height: screenHeight,
-    },
-    closeButton: {
-
+    modalHeader: {
+        position: 'absolute',
+        top: 48,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
         zIndex: 10,
+    },
+    actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        gap: 8,
+    },
+    deleteButton: {
+        backgroundColor: '#EF4444',
+    },
+    closeButton: {
+        backgroundColor: 'transparent',
+    },
+    deleteText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
     },
     closeText: {
         color: 'white',
         fontSize: 16,
-        textTransform: 'lowercase',
+    },
+    fullScreenVideo: {
+        width: screenWidth,
+        height: screenHeight,
     },
     loadingIndicator: {
         position: 'absolute',
@@ -309,16 +421,9 @@ const styles = StyleSheet.create({
         transform: [{ translateX: -25 }, { translateY: -25 }],
         zIndex: 20,
     },
-    deleteButton: {
-        zIndex: 10,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        backgroundColor: '#EF4444',
-        borderRadius: 8,
-    },
-    deleteText: {
-        color: '#fff',
-        fontSize: 14,
+    noUrlText: {
+        color: '#9CA3AF',
+        fontSize: 12,
         fontWeight: '600',
     },
 });

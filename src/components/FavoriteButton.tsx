@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFavorite, useFavoriteMutation } from '@/src/services/favorites/useFavorites';
+import { useToastHelpers } from '@/src/hooks/useToastHelpers';
 
 interface FavoriteButtonProps {
   videoId: string;
@@ -26,6 +27,7 @@ export default function FavoriteButton({
 }: FavoriteButtonProps) {
   const isFavorite = useIsFavorite(videoId);
   const favoriteMutation = useFavoriteMutation();
+  const { showFavoriteAdded, showFavoriteRemoved } = useToastHelpers();
 
   const handlePress = async () => {
     if (disabled || favoriteMutation.isPending) return;
@@ -37,7 +39,14 @@ export default function FavoriteButton({
         transcription
       });
 
-      onToggle?.(result.wasAdded);
+      // Mostrar toast baseado na ação
+      if (result.wasAdded) {
+        showFavoriteAdded();
+      } else {
+        showFavoriteRemoved();
+      }
+
+      onToggle?.(!!result.wasAdded);
     } catch (error) {
       console.error('Erro ao alterar favorito:', error);
     }

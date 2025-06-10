@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Dimensions } from "react-native";
 import Video from 'react-native-video';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
@@ -7,6 +7,7 @@ import { useAuthStore } from "@/src/store/user";
 import { useUploadVideo } from "@/src/services/videos/useVideos";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { useToastHelpers } from "@/src/hooks/useToastHelpers";
 
 const { width: widthScreen, height: heightScreen } = Dimensions.get("screen");
 
@@ -17,13 +18,14 @@ export default function VideoUpload() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isBuffering, setIsBuffering] = useState(false);
     const uploadVideoMutation = useUploadVideo();
+    const { showError, showUploadSuccess, showUploadError, showWarning } = useToastHelpers();
 
     const pickVideo = async () => {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
             if (status !== 'granted') {
-                Alert.alert('Permissão necessária', 'É necessário permitir o acesso à galeria para selecionar vídeos.');
+                showWarning('Permissão Necessária', 'É necessário permitir o acesso à galeria para selecionar vídeos.');
                 return;
             }
 
@@ -41,13 +43,13 @@ export default function VideoUpload() {
             }
         } catch (error) {
             console.error("❌ Erro ao selecionar vídeo:", error);
-            Alert.alert("Erro", "Não foi possível selecionar o vídeo da galeria");
+            showError("Erro na Seleção", "Não foi possível selecionar o vídeo da galeria");
         }
     };
 
     async function saveVideo() {
         if (!videoUri || !userData?.id) {
-            Alert.alert("Erro", "Usuário não logado ou vídeo inválido");
+            showError("Dados Inválidos", "Usuário não logado ou vídeo inválido");
             return;
         }
 
@@ -69,22 +71,25 @@ export default function VideoUpload() {
                 userId: userData.id,
                 fileUri: videoUri,
                 onProgress: (progress) => {
-                    setUploadProgress(progress);
+                    console.log(`📊 Progresso do upload: ${progress.toFixed(1)}%`);
+                    setUploadProgress(Math.round(progress));
                 }
             });
 
             if (result.success) {
-                setVideoUri(null);
-                setUploadProgress(0);
-                Alert.alert("Sucesso", "Vídeo enviado com sucesso!");
+                setTimeout(() => {
+                    setVideoUri(null);
+                    setUploadProgress(0);
+                }, 1500);
+                showUploadSuccess('Vídeo enviado com sucesso!');
             } else {
-                Alert.alert("Erro", result.error || "Erro no upload do vídeo");
+                showUploadError(result.error || "Erro no upload do vídeo");
             }
 
         } catch (error) {
             console.error("❌ Erro ao fazer upload:", error);
             const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-            Alert.alert("Erro", `Erro ao enviar o vídeo: ${errorMessage}`);
+            showUploadError(`Erro ao enviar o vídeo: ${errorMessage}`);
         }
     }
 
@@ -141,7 +146,7 @@ export default function VideoUpload() {
     }}
     onError={(error) => {
         console.error("❌ Erro no vídeo:", error);
-        Alert.alert("Erro", "Não foi possível reproduzir o vídeo");
+        showError("Erro no Vídeo", "Não foi possível reproduzir o vídeo");
     }}
 />
                         {isBuffering && (
@@ -153,16 +158,39 @@ export default function VideoUpload() {
                     </View>
 
                     {isUploading ? (
-                        <View className="mt-8 p-6 bg-[#1A1A1E] rounded-2xl">
-                            <Text className="text-white text-lg mb-4 text-center">
-                                Enviando vídeo... {uploadProgress.toFixed(0)}%
-                            </Text>
-                            <View className="h-2 bg-gray-700 rounded-full">
+                        <View className="mt-8 p-6 bg-[#1A1A1E] rounded-2xl border border-violet-600/20">
+                            <View className="flex-row items-center justify-center mb-4">
+                                <MaterialIcons name="cloud-upload" size={24} color="#8B5CF6" />
+                                <Text className="text-white text-lg ml-2 font-semibold">
+                                    Enviando vídeo...
+                                </Text>
+                            </View>
+                            
+                            <View className="flex-row items-center justify-between mb-3">
+                                <Text className="text-gray-300 text-sm">Progresso</Text>
+                                <Text className="text-violet-400 text-lg font-bold">
+                                    {Math.round(uploadProgress)}%
+                                </Text>
+                            </View>
+                            
+                            <View className="h-3 bg-gray-700 rounded-full overflow-hidden mb-2">
                                 <View 
-                                    className="h-full bg-violet-600 rounded-full transition-all duration-300"
-                                    style={{ width: `${uploadProgress}%` }}
+                                    className="h-full bg-gradient-to-r from-violet-500 to-violet-600 rounded-full"
+                                    style={{ 
+                                        width: `${Math.max(0, Math.min(100, uploadProgress))}%`,
+                                        minWidth: uploadProgress > 0 ? 4 : 0,
+                                    }}
                                 />
                             </View>
+                            
+                            <Text className="text-gray-400 text-xs text-center">
+                                {uploadProgress < 95 
+                                    ? "Processando e enviando..." 
+                                    : uploadProgress < 100 
+                                        ? "Finalizando upload..." 
+                                        : "Upload concluído!"
+                                }
+                            </Text>
                         </View>
                     ) : (
                         <View className="flex-row justify-between mt-8">

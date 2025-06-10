@@ -10,11 +10,19 @@ export async function testServerConnectivity(): Promise<{
   try {
     console.log('🔍 Testando conectividade com servidor...');
     
-    const response = await fetch(`${BASE_URL}/health`, {
+    // Criar AbortController manualmente para compatibilidade com React Native
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos
+    
+    const response = await fetch(`${BASE_URL}/users/e40d5be4-bbed-483a-b63a-5555e8ce9257/videos`, {
       method: 'GET',
-      signal: AbortSignal.timeout(5000), // 5 segundos apenas para teste
+      signal: controller.signal,
+      headers: {
+        'ngrok-skip-browser-warning': 'true', // Para evitar warning do ngrok
+      },
     });
     
+    clearTimeout(timeoutId);
     const responseTime = Date.now() - startTime;
     
     if (response.ok) {
@@ -33,6 +41,16 @@ export async function testServerConnectivity(): Promise<{
     }
   } catch (error) {
     const responseTime = Date.now() - startTime;
+    
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log(`❌ Timeout de conectividade (${responseTime}ms)`);
+      return {
+        isConnected: false,
+        responseTime,
+        error: 'Timeout de conexão',
+      };
+    }
+    
     console.log(`❌ Erro de conectividade: ${error} (${responseTime}ms)`);
     
     return {
@@ -53,11 +71,19 @@ export async function testSpecificEndpoint(endpoint: string, timeout: number = 5
   try {
     console.log(`🔍 Testando endpoint: ${endpoint}`);
     
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    // Usar AbortController compatível com React Native
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    const response = await fetch(`${BASE_URL}/${endpoint}`, {
       method: 'GET',
-      signal: AbortSignal.timeout(timeout),
+      signal: controller.signal,
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+      },
     });
     
+    clearTimeout(timeoutId);
     const responseTime = Date.now() - startTime;
     
     return {
@@ -67,6 +93,14 @@ export async function testSpecificEndpoint(endpoint: string, timeout: number = 5
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
+    
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        success: false,
+        responseTime,
+        error: 'Timeout de conexão',
+      };
+    }
     
     return {
       success: false,

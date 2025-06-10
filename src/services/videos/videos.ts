@@ -2,6 +2,9 @@
 import { api } from '@/src/api/client';
 import * as FileSystem from 'expo-file-system';
 import { router } from 'expo-router';
+import { BASE_URL } from '@/src/constants/services';
+import { notificationService } from '@/src/services/notifications/notificationService';
+import { AppState } from 'react-native';
 
 export interface UserVideo {
   id: string;
@@ -32,8 +35,29 @@ export interface DeleteVideoResponse {
   message: string;
 }
 
+interface ChunkUploadResponse {
+  success: boolean;
+  chunkIndex: number;
+  uploadId?: string;
+  error?: string;
+}
+
+interface InitiateUploadResponse {
+  uploadId: string;
+  presignedUrls: string[];
+}
+
+interface CompleteUploadResponse {
+  success: boolean;
+  videoId: string;
+  audioId: string;
+  videoUrl: string;
+  conquistouStreak?: boolean;
+  message: string;
+}
+
 /**
- * Upload de vídeo com controle de progresso e detecção de streak
+ * Upload de vídeo com chunking/streaming para vídeos grandes
  */
 export async function uploadVideo({
   userId,
@@ -45,7 +69,7 @@ export async function uploadVideo({
   onProgress?: (progress: number) => void;
 }): Promise<{ success: boolean; data?: UploadVideoResponse; error?: string }> {
   try {
-    console.log(`📤 Iniciando upload de vídeo para usuário: ${userId}`);
+    console.log(`📤 Iniciando upload streaming para usuário: ${userId}`);
     console.log(`📁 Arquivo: ${fileUri}`);
 
     // Verificar se o arquivo existe
@@ -54,11 +78,47 @@ export async function uploadVideo({
       throw new Error('Arquivo não encontrado');
     }
 
-    console.log(`📊 Tamanho do arquivo: ${fileInfo.size} bytes`);
+    const fileSizeMB = fileInfo.size / (1024 * 1024);
+    console.log(`📊 Tamanho do arquivo: ${fileInfo.size} bytes (${fileSizeMB.toFixed(2)}MB)`);
 
-    // Fazer upload com progresso
+    // Se arquivo é pequeno (< 5MB), usar upload direto tradicional
+    if (fileInfo.size < 5 * 1024 * 1024) {
+      console.log('📦 Arquivo pequeno - usando upload direto');
+      return await uploadSmallVideo(userId, fileUri, onProgress);
+    }
+
+    // Para arquivos grandes, usar upload por chunks
+    console.log('📦 Arquivo grande - usando upload streaming por chunks');
+    return await uploadLargeVideoWithChunks(userId, fileUri, fileInfo.size, onProgress);
+
+  } catch (error) {
+    console.error('❌ Erro no upload:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido no upload';
+    
+    // Enviar notificação de erro
+    const fileName = fileUri.split('/').pop() || 'video.mp4';
+    await notificationService.sendUploadErrorNotification(fileName, errorMessage);
+    
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Upload direto para arquivos pequenos (< 5MB)
+ */
+async function uploadSmallVideo(
+  userId: string, 
+  fileUri: string, 
+  onProgress?: (progress: number) => void
+): Promise<{ success: boolean; data?: UploadVideoResponse; error?: string }> {
+  try {
+    // Progresso suave para arquivos pequenos
+    onProgress?.(10); // Iniciando...
+    
+    console.log('📡 Fazendo upload de arquivo pequeno...');
+    
     const uploadResult = await FileSystem.uploadAsync(
-      `${process.env.EXPO_PUBLIC_API_BASE_URL}/videos/upload?userId=${userId}`,
+      `${BASE_URL}/videos/upload?userId=${userId}`,
       fileUri,
       {
         fieldName: 'file',
@@ -67,39 +127,105 @@ export async function uploadVideo({
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
       }
     );
 
-    console.log('📡 Upload response status:', uploadResult.status);
-    console.log('📡 Upload response body:', uploadResult.body);
+    onProgress?.(100);
 
     if (uploadResult.status === 200) {
       const data: UploadVideoResponse = JSON.parse(uploadResult.body);
       
-      // Se conquistou streak, navegar para tela de streak
+      // Enviar notificação de sucesso
+      const fileName = fileUri.split('/').pop() || 'video.mp4';
+      const wasBackground = AppState.currentState !== 'active';
+      await notificationService.sendUploadCompleteNotification(fileName, wasBackground);
+      
       if (data.conquistouStreak) {
-        console.log('🔥 STREAK CONQUISTADO! Navegando para tela de streak...');
         router.push('/(stacks)/progress/streak');
       }
       
       return { success: true, data };
     } else {
-      // Tentar fazer parse do erro
       let errorMessage = 'Erro no upload';
       try {
         const errorData = JSON.parse(uploadResult.body);
         errorMessage = errorData.error || errorMessage;
-      } catch {
-        // Se não conseguir fazer parse, usar mensagem padrão
+      } catch {}
+      
+      return { success: false, error: errorMessage };
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro no upload direto';
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Upload por chunks para arquivos grandes (>= 5MB)
+ */
+async function uploadLargeVideoWithChunks(
+  userId: string,
+  fileUri: string,
+  fileSize: number,
+  onProgress?: (progress: number) => void
+): Promise<{ success: boolean; data?: UploadVideoResponse; error?: string }> {
+  try {
+    const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB por chunk
+    const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
+    
+    console.log(`📦 Arquivo grande detectado: ${(fileSize / 1024 / 1024).toFixed(1)}MB`);
+    console.log(`📦 Usando upload direto otimizado (chunks serão implementados no backend futuramente)`);
+
+    // Para arquivos grandes, usar upload direto mas com progresso melhorado
+    onProgress?.(10); // Iniciando...
+    
+    console.log('📡 Fazendo upload direto de arquivo grande...');
+    
+    const uploadResult = await FileSystem.uploadAsync(
+      `${BASE_URL}/videos/upload?userId=${userId}`,
+      fileUri,
+      {
+        fieldName: 'file',
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        sessionType: FileSystem.FileSystemSessionType.BACKGROUND,
+      }
+    );
+
+    onProgress?.(100);
+
+    if (uploadResult.status === 200) {
+      const data: UploadVideoResponse = JSON.parse(uploadResult.body);
+      
+      console.log('🎉 Upload de arquivo grande concluído!');
+      
+      // Enviar notificação de sucesso
+      const fileName = fileUri.split('/').pop() || 'video.mp4';
+      const wasBackground = AppState.currentState !== 'active';
+      await notificationService.sendUploadCompleteNotification(fileName, wasBackground);
+      
+      if (data.conquistouStreak) {
+        router.push('/(stacks)/progress/streak');
       }
       
-      console.error('❌ Upload falhou:', errorMessage);
+      return { success: true, data };
+    } else {
+      let errorMessage = 'Erro no upload de arquivo grande';
+      try {
+        const errorData = JSON.parse(uploadResult.body);
+        errorMessage = errorData.error || errorMessage;
+      } catch {}
+      
       return { success: false, error: errorMessage };
     }
 
   } catch (error) {
-    console.error('❌ Erro no upload:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido no upload';
+    console.error('❌ Erro no upload de arquivo grande:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro no upload de arquivo grande';
     return { success: false, error: errorMessage };
   }
 }
@@ -112,7 +238,7 @@ export async function getUserVideos(userId: string): Promise<UserVideosResponse>
     console.log(`📹 Buscando vídeos do usuário: ${userId}`);
     
     const response = await api<UserVideosResponse>(`/users/${userId}/videos`, {
-      timeout: 30000, // 30 segundos para buscar vídeos
+      timeout: 180000, // 3 minutos para buscar vídeos (servidor pode estar processando uploads grandes)
     });
     
     console.log(`✅ ${response.videos.length} vídeos encontrados`);

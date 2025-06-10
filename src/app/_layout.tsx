@@ -10,6 +10,7 @@ import Loading from "./components/loading";
 import { StatusBar } from "react-native";
 import 'react-native-reanimated';
 import { QueryProvider } from "../providers/QueryProvider";
+import { ToastProvider, ToastContainer } from "@/src/components/Toast";
 
 export default function Layout() {
   const [fontsLoaded] = useFonts({
@@ -24,8 +25,11 @@ export default function Layout() {
 
   return (
     <QueryProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar barStyle={"light-content"} backgroundColor="black" />
+      <ToastProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+        <ToastContainer />
+        <StatusBar barStyle={"light-content"} backgroundColor="black" />
+      </ToastProvider>
     </QueryProvider>
   );
 }

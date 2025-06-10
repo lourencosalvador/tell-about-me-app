@@ -1,7 +1,7 @@
 import Elipse from "@/src/svg/elipse"
 import HartIcon from "@/src/svg/hart-icon"
 import NotificationButton from "@/src/components/NotificationButton"
-import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native"
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native"
 import { LinearGradient } from 'expo-linear-gradient';
 import ArrowVertical from "@/src/svg/arrow-vertical";
 import VoiceIcon from "@/src/svg/voice-icon";
@@ -13,6 +13,7 @@ import { useAuthStore } from "@/src/store/user";
 import { useState, useEffect } from "react";
 import { useRecommendation, useGenerateRecommendation } from "@/src/services/recommendations/useRecommendations";
 import { MaterialIcons } from '@expo/vector-icons';
+import { useToastHelpers } from '@/src/hooks/useToastHelpers';
 
 export default function Dicas() {
     const { user: userData } = useAuthStore();
@@ -21,6 +22,7 @@ export default function Dicas() {
     // Hooks para recomendações
     const { data: recommendationData, isLoading, error, refetch } = useRecommendation(userData?.id || '');
     const generateMutation = useGenerateRecommendation();
+    const { showSuccess, showError, showRecommendationReady } = useToastHelpers();
 
     const recommendation = recommendationData?.recommendation;
 
@@ -45,10 +47,10 @@ export default function Dicas() {
 
         try {
             await generateMutation.mutateAsync(userData.id);
-            Alert.alert('Sucesso!', 'Nova recomendação gerada com sucesso!');
+            showSuccess('Sucesso!', 'Nova recomendação gerada com sucesso!');
         } catch (error: any) {
             const errorMessage = error?.response?.data?.error || error?.message || 'Erro ao gerar recomendação';
-            Alert.alert('Erro', errorMessage);
+            showError('Erro', errorMessage);
         }
     };
 

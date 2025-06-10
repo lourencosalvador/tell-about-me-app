@@ -1,1 +1,1 @@
-export const BASE_URL = "https://0f349cd81e75ce3907638a811844d046.serveo.net/" 
+export const BASE_URL = "https://backend-tell-me-about-yourself-8nps.onrender.com"   

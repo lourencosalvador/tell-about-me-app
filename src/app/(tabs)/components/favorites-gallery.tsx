@@ -14,8 +14,7 @@ import { Video as ExpoVideo, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import PlayIcon from '@/src/svg/play-icon';
 import BackButtomIcon from '@/src/svg/back-buttom-icon';
 import VideoEmptyIcon from '@/src/svg/video-empty-icon';
-import { useUserVideos, useDeleteVideo } from '@/src/services/videos/useVideos';
-import { UserVideo } from '@/src/types';
+import { useFavorites } from '@/src/services/favorites/useFavorites';
 import FavoriteButton from '@/src/components/FavoriteButton';
 import { useToastHelpers } from '@/src/hooks/useToastHelpers';
 
@@ -27,17 +26,19 @@ interface Props {
     userId: string;
 }
 
-const VideoGallery = ({ userId }: Props) => {
+const FavoritesGallery = ({ userId }: Props) => {
     const videoRef = useRef<ExpoVideo>(null);
-    const [selectedVideo, setSelectedVideo] = useState<UserVideo | null>(null);
+    const [selectedVideo, setSelectedVideo] = useState<any | null>(null);
     const [isVideoLoading, setIsVideoLoading] = useState(false);
     
-    // React Query hooks
-    const { data: videos = [], isLoading: isFetchingVideos, error, refetch } = useUserVideos(userId);
-    const deleteVideoMutation = useDeleteVideo();
+    // Hook para favoritos
+    const { userFavorites, removeFromFavorites } = useFavorites();
+    
+    // Hook para toasts
+    const { showFavoriteRemoved } = useToastHelpers();
 
-    const handleVideoPress = useCallback((video: UserVideo) => {
-        setSelectedVideo(video);
+    const handleVideoPress = useCallback((favoriteVideo: any) => {
+        setSelectedVideo(favoriteVideo);
         setIsVideoLoading(true);
     }, []);
 
@@ -53,65 +54,62 @@ const VideoGallery = ({ userId }: Props) => {
         }
     }, []);
 
-    const deleteVideo = useCallback(async () => {
-        if (!selectedVideo?.id) return;
+    const removeFavorite = useCallback(async () => {
+        if (!selectedVideo?.videoId) return;
 
         Alert.alert(
-            "Confirmar exclusão",
-            "Tem certeza que deseja excluir este vídeo?",
+            "Remover dos favoritos",
+            "Tem certeza que deseja remover este vídeo dos favoritos?",
             [
                 { text: "Cancelar", style: "cancel" },
                 {
-                    text: "Excluir",
+                    text: "Remover",
                     style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await deleteVideoMutation.mutateAsync(selectedVideo.id);
-                            handleCloseModal();
-                        } catch (error) {
-                            Alert.alert("Erro", "Não foi possível excluir o vídeo");
-                        }
+                    onPress: () => {
+                        removeFromFavorites(selectedVideo.videoId);
+                        handleCloseModal();
+                        showFavoriteRemoved();
                     }
                 }
             ]
         );
-    }, [selectedVideo, deleteVideoMutation, handleCloseModal]);
+    }, [selectedVideo, removeFromFavorites, handleCloseModal, showFavoriteRemoved]);
 
-    const renderVideoItem = useCallback(({ item }: { item: UserVideo }) => (
+    const renderVideoItem = useCallback(({ item }: { item: any }) => (
         <TouchableOpacity
             onPress={() => handleVideoPress(item)}
             style={styles.videoItem}
             activeOpacity={0.7}
         >
-            {item.url ? (
-            <ExpoVideo
-                source={{ uri: item.url }}
-                style={styles.video}
-                resizeMode={ResizeMode.COVER}
-                isMuted
+            {item.videoUrl ? (
+                <ExpoVideo
+                    source={{ uri: item.videoUrl }}
+                    style={styles.video}
+                    resizeMode={ResizeMode.COVER}
+                    isMuted
                     shouldPlay={false}
                     progressUpdateIntervalMillis={500}
-                onError={(error) => {
-                        console.error("❌ Erro no vídeo:", error);
-                        console.error("📹 URL do vídeo:", item.url);
+                    onError={(error) => {
+                        console.error("❌ Erro no vídeo favorito:", error);
+                        console.error("📹 URL do vídeo:", item.videoUrl);
                     }}
                     onLoad={(status) => {
-                        console.log("✅ Vídeo carregado:", item.id);
-                        console.log("📹 URL:", item.url);
-                }}
+                        console.log("✅ Vídeo favorito carregado:", item.videoId);
+                        console.log("📹 URL:", item.videoUrl);
+                    }}
                     onLoadStart={() => {
-                        console.log("⏳ Iniciando carregamento do vídeo:", item.id);
-                        console.log("📹 URL:", item.url);
+                        console.log("⏳ Iniciando carregamento do vídeo favorito:", item.videoId);
+                        console.log("📹 URL:", item.videoUrl);
                     }}
                     onPlaybackStatusUpdate={(status) => {
                         if ('error' in status && status.error) {
                             console.error("❌ Erro no playback status:", status.error);
                         }
                         if (status.isLoaded && status.didJustFinish) {
-                            console.log("✅ Vídeo terminou");
+                            console.log("✅ Vídeo favorito terminou");
                         }
                     }}
-            />
+                />
             ) : (
                 <View style={styles.videoPlaceholder}>
                     <VideoEmptyIcon />
@@ -122,9 +120,9 @@ const VideoGallery = ({ userId }: Props) => {
             {/* Botão de favorito */}
             <View style={styles.favoriteButtonContainer}>
                 <FavoriteButton
-                    videoId={item.id}
-                    videoUrl={item.url}
-                    transcription={item.audio?.transcription?.text}
+                    videoId={item.videoId}
+                    videoUrl={item.videoUrl}
+                    transcription={item.transcription}
                     size={18}
                     activeColor="#FF4757"
                     inactiveColor="rgba(255, 255, 255, 0.7)"
@@ -134,61 +132,40 @@ const VideoGallery = ({ userId }: Props) => {
             <View style={styles.playIconContainer}>
                 <PlayIcon />
             </View>
-            {item.duration && (
-                <View style={styles.durationContainer}>
-                    <Text style={styles.durationText}>
-                        {Math.floor(item.duration / 60)}:{(item.duration % 60).toString().padStart(2, '0')}
-                    </Text>
-                </View>
-            )}
+
+            {/* Indicador de favorito */}
+            <View style={styles.favoriteIndicator}>
+                <Text style={styles.favoriteText}>❤️</Text>
+            </View>
         </TouchableOpacity>
     ), [handleVideoPress]);
 
-    if (error) {
-        return (
-            <View style={styles.errorContainer}>
-                <VideoEmptyIcon />
-                <Text style={styles.errorText}>Erro ao carregar vídeos</Text>
-                <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-                    <Text style={styles.retryText}>Tentar novamente</Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
-
     return (
         <View style={styles.container}>
-            {isFetchingVideos ? (
-                <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#8B5CF6" />
-                    <Text style={styles.loadingText}>Carregando vídeos...</Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={videos}
-                    keyExtractor={(item) => item.id}
-                    numColumns={2}
-                    scrollEnabled={false}
-                    initialNumToRender={MAX_CONCURRENT_VIDEOS}
-                    maxToRenderPerBatch={MAX_CONCURRENT_VIDEOS}
-                    windowSize={5}
-                    removeClippedSubviews
-                    columnWrapperStyle={styles.columnWrapper}
-                    contentContainerStyle={styles.listContent}
-                    renderItem={renderVideoItem}
-                    ListEmptyComponent={() => (
-                        <View style={styles.emptyContainer}>
-                            <View style={styles.emptyContent}>
-                                <VideoEmptyIcon />
-                                <Text style={styles.emptyText}>Nenhum vídeo encontrado</Text>
-                                <Text style={styles.emptySubText}>
-                                    Grave seu primeiro vídeo para começar!
-                                </Text>
-                            </View>
+            <FlatList
+                data={userFavorites}
+                keyExtractor={(item) => item.id}
+                numColumns={2}
+                scrollEnabled={false}
+                initialNumToRender={MAX_CONCURRENT_VIDEOS}
+                maxToRenderPerBatch={MAX_CONCURRENT_VIDEOS}
+                windowSize={5}
+                removeClippedSubviews
+                columnWrapperStyle={styles.columnWrapper}
+                contentContainerStyle={styles.listContent}
+                renderItem={renderVideoItem}
+                ListEmptyComponent={() => (
+                    <View style={styles.emptyContainer}>
+                        <View style={styles.emptyContent}>
+                            <VideoEmptyIcon />
+                            <Text style={styles.emptyText}>Nenhum vídeo favorito</Text>
+                            <Text style={styles.emptySubText}>
+                                Toque no ícone de coração nos seus vídeos para adicioná-los aos favoritos!
+                            </Text>
                         </View>
-                    )}
-                />
-            )}
+                    </View>
+                )}
+            />
 
             <Modal
                 visible={!!selectedVideo}
@@ -198,17 +175,12 @@ const VideoGallery = ({ userId }: Props) => {
             >
                 <View style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
-                    <TouchableOpacity
-                            onPress={deleteVideo}
-                            style={[styles.actionButton, styles.deleteButton]}
+                        <TouchableOpacity
+                            onPress={removeFavorite}
+                            style={[styles.actionButton, styles.removeButton]}
                             activeOpacity={0.7}
-                            disabled={deleteVideoMutation.isPending}
                         >
-                            {deleteVideoMutation.isPending ? (
-                                <ActivityIndicator size="small" color="#fff" />
-                            ) : (
-                            <Text style={styles.deleteText}>Excluir vídeo</Text>
-                            )}
+                            <Text style={styles.removeText}>Remover dos favoritos</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -229,29 +201,29 @@ const VideoGallery = ({ userId }: Props) => {
                         />
                     )}
 
-                    {selectedVideo?.url && (
-                    <ExpoVideo
-                        ref={videoRef}
-                            source={{ uri: selectedVideo.url }}
-                        style={styles.fullScreenVideo}
-                        useNativeControls
-                        resizeMode={ResizeMode.CONTAIN}
-                        shouldPlay
+                    {selectedVideo?.videoUrl && (
+                        <ExpoVideo
+                            ref={videoRef}
+                            source={{ uri: selectedVideo.videoUrl }}
+                            style={styles.fullScreenVideo}
+                            useNativeControls
+                            resizeMode={ResizeMode.CONTAIN}
+                            shouldPlay
                             progressUpdateIntervalMillis={500}
-                        onLoad={handleVideoLoad}
-                        onError={(error) => {
+                            onLoad={handleVideoLoad}
+                            onError={(error) => {
                                 console.error("❌ Erro no player:", error);
-                                console.error("📹 URL:", selectedVideo.url);
+                                console.error("📹 URL:", selectedVideo.videoUrl);
                             }}
                             onPlaybackStatusUpdate={(status) => {
                                 if ('error' in status && status.error) {
                                     console.error("❌ Erro no playback status:", status.error);
                                 }
                                 if (status.isLoaded && status.didJustFinish) {
-                                    console.log("✅ Vídeo terminou");
+                                    console.log("✅ Vídeo favorito terminou");
                                 }
-                        }}
-                    />
+                            }}
+                        />
                     )}
                 </View>
             </Modal>
@@ -261,40 +233,6 @@ const VideoGallery = ({ userId }: Props) => {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 40,
-    },
-    loadingText: {
-        color: '#fff',
-        marginTop: 10,
-        fontSize: 14,
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 40,
-    },
-    errorText: {
-        color: '#fff',
-        fontSize: 16,
-        marginTop: 16,
-        marginBottom: 12,
-    },
-    retryButton: {
-        backgroundColor: '#8B5CF6',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 8,
-    },
-    retryText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
-    },
     columnWrapper: {
         justifyContent: 'space-between',
         marginBottom: 10,
@@ -329,26 +267,25 @@ const styles = StyleSheet.create({
         right: 8,
         zIndex: 2,
     },
+    favoriteIndicator: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        borderRadius: 12,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        zIndex: 2,
+    },
+    favoriteText: {
+        fontSize: 12,
+    },
     playIconContainer: {
         position: 'absolute',
         top: '45%',
         left: '45%',
         transform: [{ translateX: -12 }, { translateY: -12 }],
         zIndex: 2,
-    },
-    durationContainer: {
-        position: 'absolute',
-        bottom: 8,
-        right: 8,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
-    durationText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
     },
     emptyContainer: {
         flex: 1,
@@ -396,13 +333,13 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         gap: 8,
     },
-    deleteButton: {
-        backgroundColor: '#EF4444',
+    removeButton: {
+        backgroundColor: '#FF4757',
     },
     closeButton: {
         backgroundColor: 'transparent',
     },
-    deleteText: {
+    removeText: {
         color: '#fff',
         fontSize: 14,
         fontWeight: '600',
@@ -429,4 +366,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default React.memo(VideoGallery);
+export default React.memo(FavoritesGallery); 

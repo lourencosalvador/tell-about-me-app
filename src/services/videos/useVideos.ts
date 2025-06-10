@@ -23,16 +23,21 @@ export const useUserVideos = (userId: string) => {
       return response.videos;
     },
     enabled: !!userId, // Só executa se tiver userId
-    staleTime: 1000 * 60 * 5, // 5 minutos
-    retry: (failureCount, error) => {
-      // Só retry se não for timeout
-      if (error.message.includes('Tempo limite')) {
-        console.log('⏰ Timeout na busca de vídeos - não fazendo retry');
-        return false;
+    staleTime: 1000 * 60 * 3, // 3 minutos - vídeos não mudam frequentemente
+    gcTime: 1000 * 60 * 15, // 15 minutos - manter cache por mais tempo
+    retry: (failureCount, error: any) => {
+      // Retry mais específico para timeout
+      if (error?.message?.includes('Tempo limite')) {
+        console.log('⏰ Timeout na busca de vídeos - fazendo retry');
+        return failureCount < 2; // Até 2 tentativas para timeout
       }
-      return failureCount < 2;
+      // Para outros erros, usar configuração padrão
+      return failureCount < 3;
     },
-    retryDelay: 3000, // 3 segundos entre tentativas
+    retryDelay: (attemptIndex) => {
+      // Delay maior para vídeos já que podem ser requisições pesadas
+      return Math.min(2000 * Math.pow(1.5, attemptIndex), 10000); // 2s, 3s, 4.5s, max 10s
+    },
   });
 };
 

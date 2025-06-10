@@ -106,12 +106,34 @@ export const useNotificationStore = create<NotificationStore>()(
       },
     }),
     {
-      name: 'notifications-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      name: 'notifications-storage-fresh',
+      storage: createJSONStorage(() => AsyncStorage, {
+        reviver: (key, value) => {
+          // Recriar objetos Date ao deserializar
+          if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+            return new Date(value);
+          }
+          return value;
+        },
+        replacer: (key, value) => {
+          // Converter Date para string ao serializar
+          if (value instanceof Date) {
+            return value.toISOString();
+          }
+          return value;
+        }
+      }),
       partialize: (state) => ({
         notifications: state.notifications,
         unreadCount: state.unreadCount,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          console.log('✅ Notifications storage rehydrated successfully');
+        } else {
+          console.warn('⚠️ Notifications storage rehydration failed, using default state');
+        }
+      },
     }
   )
 ); 

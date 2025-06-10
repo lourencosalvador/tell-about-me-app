@@ -17,6 +17,7 @@ import { useFavorites } from "@/src/services/favorites/useFavorites";
 import { router } from "expo-router";
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNotifications } from "@/src/hooks/useNotifications";
+import NetworkStatus from "@/src/components/NetworkStatus";
 
 export default function Home() {
     const { user: userData } = useAuthStore();
@@ -90,6 +91,9 @@ export default function Home() {
 
     return (
         <View className="flex-1 bg-[#161616] pt-8 px-6">
+            {/* Indicador de Status de Rede */}
+            <NetworkStatus />
+            
             <View className="w-full justify-between mb-6 flex-row items-center h-auto">
                 <View className="flex flex-row gap-4 items-center">
                     <View className="w-[3.5rem] h-[3.5rem] overflow-hidden rounded-full border-2 border-bg-primary">
@@ -161,9 +165,7 @@ export default function Home() {
                         <Card title="Recomendações" value={recommendationCount} />
                     </View>
                     <View className="w-full h-auto flex flex-row gap-4">
-                        <TouchableOpacity onPress={() => router.push('/(tabs)/favorites')}>
-                            <Card title="Favoritos" value={favoriteCount} />
-                        </TouchableOpacity>
+                        <Card title="Favoritos" value={favoriteCount} />
                         <Card title="Total de Dias" value={progress} />
                     </View>
                 </View>
@@ -179,6 +181,29 @@ export default function Home() {
                     <CardRecommendations />
                 </View>
             </View> */}
+
+            {/* Botão flutuante para demo de toast */}
+            <TouchableOpacity
+                onPress={() => router.push('/(stacks)/demo/toast-demo')}
+                className="absolute bottom-8 right-6 w-14 h-14 rounded-full items-center justify-center"
+                style={{
+                    shadowColor: '#8B5CF6',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 16,
+                    elevation: 12,
+                }}
+                activeOpacity={0.8}
+            >
+                <LinearGradient
+                    colors={['#8B5CF6', '#EC4899']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    className="w-full h-full rounded-full items-center justify-center"
+                >
+                    <MaterialIcons name="notifications" size={24} color="white" />
+                </LinearGradient>
+            </TouchableOpacity>
         </View>
     )
 }

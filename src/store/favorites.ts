@@ -88,10 +88,33 @@ export const useFavoritesStore = create<FavoritesState>()(
       },
     }),
     {
-      name: 'favorites-storage',
-      storage: createJSONStorage(() => AsyncStorage),
-      // Particionar por versão para evitar problemas de compatibilidade
-      version: 1,
+      name: 'favorites-storage-fresh',
+      storage: createJSONStorage(() => AsyncStorage, {
+        reviver: (key, value) => {
+          // Recriar objetos Date ao deserializar
+          if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+            return new Date(value);
+          }
+          return value;
+        },
+        replacer: (key, value) => {
+          // Converter Date para string ao serializar
+          if (value instanceof Date) {
+            return value.toISOString();
+          }
+          return value;
+        }
+      }),
+      partialize: (state) => ({
+        favorites: state.favorites,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          console.log('✅ Favorites storage rehydrated successfully');
+        } else {
+          console.warn('⚠️ Favorites storage rehydration failed, using default state');
+        }
+      },
     }
   )
 ); 

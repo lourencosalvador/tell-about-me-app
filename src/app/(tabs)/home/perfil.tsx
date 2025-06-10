@@ -1,7 +1,7 @@
 import AlertIconPerfil from "@/src/svg/alert-icon-perfil"
 import ArrowUpIcon from "@/src/svg/arrow-up"
 import ConfigIcon from "@/src/svg/config-icon"
-import { View, Text, TouchableOpacity, Image, ScrollView } from "react-native"
+import { View, Text, TouchableOpacity, Image, ScrollView, Modal } from "react-native"
 import CameraPerfilIcon from "@/src/svg/camera-perfil-icon"
 import ChatOptionIcon from "@/src/svg/chat-option"
 import HartIPerfilIcon from "@/src/svg/hart-perfil-nav"
@@ -11,27 +11,44 @@ import { useAuthStore } from "@/src/store/user"
 import { router } from "expo-router"
 import VideoGallery from "../components/videos"
 import { useUserVideos } from "@/src/services/videos/useVideos"
-import { Modal } from "react-native"
 import BackButtomCv from "@/src/svg/back-buttom-cv"
 import HartIcon from "@/src/svg/hart-icon"
 import NotificationIcon from "@/src/svg/notification-icon"
 import ChatCv from "@/src/svg/chat-cv"
 import ButtomCv from "@/src/svg/cv-buttom"
-import CVGenerator from "../../components/cv-generator"
+import { ProfessionalCVGenerator } from "../../components/professional-cv-generator"
 import { useFavorites } from "@/src/services/favorites/useFavorites"
 import NotificationButton from "@/src/components/NotificationButton"
 import { useNotificationSender } from "@/src/hooks/useNotifications"
+import { MaterialIcons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useAchievements } from "@/src/hooks/useAchievements"
+import { useChallenges } from "@/src/hooks/useChallenges"
+import { useWelcome } from "@/src/hooks/useWelcome"
+import { useUserTitle, useUserAchievementTitle } from "@/src/hooks/useUserTitle"
 
 export default function Test() {
     const { user: userData, logout } = useAuthStore();
     const [active, setActive] = useState("galery")
     const { data: userVideos = [] } = useUserVideos(userData?.id || '');
     const { favoriteCount } = useFavorites();
-    const [modalVisible, setModalVisible] = useState(false);
+    const [showCVGenerator, setShowCVGenerator] = useState(false);
+    const [showConfigDropdown, setShowConfigDropdown] = useState(false);
+    
+    // Ativar sistema gamificado
+    useAchievements();
+    useChallenges();
+    useWelcome(); // Sistema de boas-vindas
+    
+    // Obter título do usuário
+    const levelTitle = useUserTitle();
+    const achievementTitle = useUserAchievementTitle();
+    const userTitle = achievementTitle || levelTitle; // Priorizar título por conquistas
 
     function logoutUser() {
         logout()
         router.push('/(stacks)/autentication')
+        setShowConfigDropdown(false)
     }
 
     function handleEditProfile() {
@@ -42,62 +59,64 @@ export default function Test() {
         router.push('/(stacks)/profile/edit');
     }
 
+    function handleStatistics() {
+        router.push('/(stacks)/statistics');
+        setShowConfigDropdown(false);
+    }
+
     return (
         <View className="flex-1 bg-[#161616] pt-8 px-6">
             <View className="w-full justify-between mb-9 flex-row items-center h-auto">
                 <View className="flex flex-row gap-3">
                     <AlertIconPerfil />
-                    <TouchableOpacity onPress={() => setModalVisible(true)} className="w-[8rem] gap-1  flex-row h-[3rem] bg-bg-primary rounded-[0.75rem] flex justify-center items-center">
-                        <Text className={`text-[#FFFFFF] text-[14px] font-semibold`}>Curriculo</Text>
+                    <TouchableOpacity 
+                        onPress={() => setShowCVGenerator(true)} 
+                        className="w-[8rem] gap-1 flex-row h-[3rem] bg-bg-primary rounded-[0.75rem] flex justify-center items-center"
+                    >
+                        <Text className={`text-[#FFFFFF] text-[14px] font-semibold`}>Currículo</Text>
                         <ArrowUpIcon />
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                    onPress={logoutUser}
-                >
-                    <View className="p-3 rounded-xl bg-[#262626]">
+                <View className="relative">
+                    <TouchableOpacity
+                        onPress={() => setShowConfigDropdown(!showConfigDropdown)}
+                        className="p-3 rounded-xl bg-[#262626]"
+                    >
                         <ConfigIcon />
-                    </View>
-                </TouchableOpacity>
+                    </TouchableOpacity>
+
+                    {/* Dropdown Menu */}
+                    {showConfigDropdown && (
+                        <View className="absolute top-14 right-0 bg-[#1A1A1E] rounded-xl shadow-lg border border-gray-700 min-w-[200px] z-50">
+                            <TouchableOpacity
+                                onPress={handleStatistics}
+                                className="flex-row items-center p-4 border-b border-gray-700"
+                            >
+                                <MaterialIcons name="analytics" size={20} color="#8B5CF6" />
+                                <Text className="text-white ml-3 font-medium">Estatísticas</Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                                onPress={logoutUser}
+                                className="flex-row items-center p-4"
+                            >
+                                <MaterialIcons name="logout" size={20} color="#EF4444" />
+                                <Text className="text-red-400 ml-3 font-medium">Sair da Conta</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
             </View>
 
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => {
-                    setModalVisible(false);
-                }}
-            >
-                <View className="flex-1 bg-[#161616] pt-8 px-6">
-                    {/*  */}
-                    <View className="flex flex-row w-full justify-between items-center mb-10">
-                        <TouchableOpacity onPress={() => setModalVisible(false)}>
-                            <BackButtomCv />
-                        </TouchableOpacity>
-
-                        <View className="flex flex-row gap-3">
-                            <View className="bg-[#1A1A1E] flex flex-row gap-3 w-[5.5rem] items-center justify-center rounded-lg py-2">
-                                <Text className="text-[22px] font-heading text-white">0</Text>
-                                <HartIcon />
-                            </View>
-
-                            <NotificationButton />
-                        </View>
-                    </View>
-
-                    <View className="flex w-full h-auto gap-2 mb-8">
-                    <Text className="text-[12px] font-heading text-[#DADADA]">Currículo Profissional</Text>
-                      <Text className="text-[22px] font-heading text-white">Muitos Parabéns, Lorrys 🎉</Text>
-                    </View>
-
-                    <View className="flex w-full h-auto gap-8">
-                        <ChatCv />
-                        <CVGenerator />
-                    </View>
-                </View>
-            </Modal>
+            {/* Overlay para fechar dropdown */}
+            {showConfigDropdown && (
+                <TouchableOpacity
+                    onPress={() => setShowConfigDropdown(false)}
+                    className="absolute inset-0 z-40"
+                    activeOpacity={1}
+                />
+            )}
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
@@ -120,8 +139,21 @@ export default function Test() {
 
                     <View className="flex mb-8 gap-5 w-full h-auto justify-center items-center">
                         <View className="flex gap-2 items-center">
-                            <Text className="text-[18px] font-heading text-white">@{userData?.name}</Text>
-                            {/* <Text className="text-[16.5px] font-subtitle text-[#B0B0B0]">Junior Front-End Developer</Text> */}
+                            <View className="flex-row items-center justify-center">
+                                <Text className="text-[18px] font-heading text-white">@{userData?.name}</Text>
+                                <View className="ml-2 flex-row items-center">
+                                    <Text className="text-lg">{userTitle.emoji}</Text>
+                                    <Text 
+                                        className="ml-1 text-[16px] font-bold"
+                                        style={{ color: userTitle.color }}
+                                    >
+                                        {userTitle.title}
+                                    </Text>
+                                </View>
+                            </View>
+                            <Text className="text-[12px] font-subtitle text-gray-400 text-center">
+                                {userTitle.description}
+                            </Text>
                         </View>
 
                         <View className="flex flex-row gap-4 items-center">
@@ -167,17 +199,20 @@ export default function Test() {
                 {active === 'galery' ? (
                     <VideoGallery userId={userData?.id ?? ''} />
                 ) : (
-                    // Mostrar favoritos quando a aba "hart" estiver ativa
-                    <View className="py-8">
-                        <Text className="text-white text-center text-lg">
-                            Em breve: visualização de favoritos aqui
-                        </Text>
+                    <View className="flex-1 items-center justify-center p-8">
+                        <Text className="text-white text-lg">Favoritos em desenvolvimento</Text>
                     </View>
                 )}
 
                 {/* Seção de Teste de Notificações - Comentada temporariamente */}
                 {/* <TestNotificationSection /> */}
             </ScrollView>
+
+            {/* Professional CV Generator Modal */}
+            <ProfessionalCVGenerator
+                visible={showCVGenerator}
+                onClose={() => setShowCVGenerator(false)}
+            />
         </View>
     )
 }

@@ -16,7 +16,7 @@ interface ApiError extends Error {
 
 class APIClient {
   private baseURL: string;
-  private defaultTimeout: number = 10000; // 10 segundos
+  private defaultTimeout: number = 180000; // 3 minutos para uploads grandes
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
@@ -119,7 +119,7 @@ const apiClient = new APIClient(BASE_URL);
 
 // Função legacy para compatibilidade com código existente
 async function api<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers, timeout = 20000 } = options;
+  const { method = 'GET', body, headers, timeout = 180000 } = options; // 3 minutos padrão
 
   const config: RequestInit = {
     method,
@@ -151,7 +151,7 @@ async function api<T>(endpoint: string, options: RequestOptions = {}): Promise<T
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Erro inesperado na requisição.');
+      throw new Error(errorData.error || errorData.message || 'Erro inesperado na requisição.');
     }
 
     return response.json() as Promise<T>;

@@ -10,11 +10,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { signInSchema, SignInSchemaType } from "../schemas/sign-up-schema";
 import { Controller, useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
+import { useToastHelpers } from "@/src/hooks/useToastHelpers";
 
 
 export default function TestCom() {
     const { token, login } = useAuthStore();
     const [isNavigationReady, setIsNavigationReady] = useState(false);
+    const [isHidden, setIsHidden] = useState<boolean>(true);
+    const { showError } = useToastHelpers();
 
     useEffect(() => {
       const timer = setTimeout(() => setIsNavigationReady(true), 100);
@@ -33,11 +36,14 @@ export default function TestCom() {
     const { mutateAsync: loginUserFn } = useMutation({
         mutationFn: UserService.loginUser,
         onSuccess: (data: any) => {
+            console.log('🎉 Login Success Data:', data)
             login(data)
+            console.log('✅ Login function called')
         },
         onError: (error: any) => {
             console.error('Error fazendo login:', error)
-            Alert.alert('Error ❌', 'Ocorreu um erro ao fazer o login')
+            const errorMessage = error.message || 'Ocorreu um erro ao fazer o login';
+            showError('Login falhou ❌', errorMessage)
         },
     })
 

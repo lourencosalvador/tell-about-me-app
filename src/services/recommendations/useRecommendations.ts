@@ -18,7 +18,18 @@ export function useRecommendation(userId: string) {
     enabled: !!userId,
     staleTime: 1000 * 60 * 30, // 30 minutos
     gcTime: 1000 * 60 * 60, // 1 hora
-    retry: 2,
+    retry: (failureCount, error: any) => {
+      // Retry específico para recomendações
+      if (error?.message?.includes('Tempo limite')) {
+        console.log('⏰ Timeout na busca de recomendação - fazendo retry');
+        return failureCount < 2; // Até 2 tentativas para timeout
+      }
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => {
+      // Delay progressivo
+      return Math.min(3000 * Math.pow(1.5, attemptIndex), 15000); // 3s, 4.5s, 6.75s, max 15s
+    },
   });
 }
 

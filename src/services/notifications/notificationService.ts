@@ -176,6 +176,40 @@ class NotificationService {
     );
   }
 
+  // Enviar notificação de upload concluído
+  async sendUploadCompleteNotification(fileName: string, wasBackground: boolean = false) {
+    const title = '📹 Upload Concluído!';
+    const body = wasBackground 
+      ? `Seu vídeo "${fileName}" foi enviado com sucesso enquanto você usava outros apps!`
+      : `Seu vídeo "${fileName}" foi enviado com sucesso!`;
+
+    return this.scheduleLocalNotification(
+      title,
+      body,
+      'general',
+      {
+        uploadComplete: { fileName, wasBackground },
+        screen: 'profile',
+      }
+    );
+  }
+
+  // Enviar notificação de erro no upload
+  async sendUploadErrorNotification(fileName: string, error: string) {
+    const title = '❌ Erro no Upload';
+    const body = `Não foi possível enviar "${fileName}": ${error}`;
+
+    return this.scheduleLocalNotification(
+      title,
+      body,
+      'general',
+      {
+        uploadError: { fileName, error },
+        screen: 'camera',
+      }
+    );
+  }
+
   // Cancelar notificação
   async cancelNotification(notificationId: string) {
     try {

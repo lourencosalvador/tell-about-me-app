@@ -71,7 +71,7 @@ export const useFavorites = () => {
   };
 };
 
-// Hook com mutações otimizadas para React Query
+// Hook com mutações otimizadas para React Query e toasts
 export const useFavoriteMutation = () => {
   const queryClient = useQueryClient();
   const { toggleFavorite } = useFavorites();

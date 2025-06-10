@@ -24,6 +24,30 @@ export interface NotificationData {
     currentStreak: number;
     milestone?: number;
   };
+
+  // Para conquistas
+  icon?: string;
+  streakReward?: number;
+
+  // Para desafios
+  challenge?: {
+    title: string;
+    description: string;
+    reward: number;
+    deadline: Date;
+  };
+
+  // Para upload concluído
+  uploadComplete?: {
+    fileName: string;
+    wasBackground: boolean;
+  };
+
+  // Para erro de upload
+  uploadError?: {
+    fileName: string;
+    error: string;
+  };
   
   // Dados gerais para navegação
   screen?: string;

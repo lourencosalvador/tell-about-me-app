@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '@/src/store/user';
 import { useUpdateProfile, useUploadProfilePhoto } from '@/src/services/user/useUser';
+import { useToastHelpers } from '@/src/hooks/useToastHelpers';
 
 export default function EditProfileScreen() {
   const { user } = useAuthStore();
